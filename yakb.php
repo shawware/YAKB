@@ -15,6 +15,7 @@ use Shawware\Yakb\Storage\StorageInterface;
 final class Router
 {
     private const REACTION_EMOJI = 'tada';
+    private const SELF_KARMA_EMOJI = 'no_good';
     private const HISTORY_WINDOW_DAYS = 30;
     private const MONTH_WINDOW_DAYS = 30;
     private const TOP_SCORES_LIMIT = 10;
@@ -70,6 +71,16 @@ final class Router
         string $channel,
         string $messageTimestamp
     ): void {
+        if ($fromUser === $toUser) {
+            $this->slackApi->addReaction($channel, $messageTimestamp, self::SELF_KARMA_EMOJI);
+            $this->slackApi->postMessage(
+                $channel,
+                "Nice try, <@{$fromUser}> — you can't give yourself karma 😏"
+            );
+
+            return;
+        }
+
         $result = $this->storage->recordEvent($fromUser, $toUser, $points, $channel);
         $tier = $this->karma->tierForScore($result['score']);
         $tierText = $tier !== null ? " ({$tier})" : '';

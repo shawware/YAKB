@@ -70,6 +70,74 @@ final class AppRoutingTest extends TestCase
         $this->assertSame(['userId' => 'UTOUSER', 'score' => 2], $this->storage->getScore('UTOUSER'));
     }
 
+    public function testSelfMentionDoesNotAwardKarma(): void
+    {
+        $this->slackApi->expects($this->once())
+            ->method('addReaction')
+            ->with('C1', '1700000000.0001', 'no_good');
+
+        $this->slackApi->expects($this->once())
+            ->method('postMessage')
+            ->with('C1', $this->stringContains("can't give yourself karma"));
+
+        $this->router->handleEvent([
+            'type' => 'event_callback',
+            'event' => [
+                'type' => 'message',
+                'channel' => 'C1',
+                'user' => 'USELFUSER',
+                'ts' => '1700000000.0001',
+                'text' => '<@USELFUSER> ++',
+            ],
+        ]);
+
+        $this->assertNull($this->storage->getScore('USELFUSER'));
+    }
+
+    public function testSelfMentionInMixedMessageStillAwardsTheOtherUser(): void
+    {
+        $reactions = [];
+        $messages = [];
+
+        $this->slackApi->method('addReaction')
+            ->willReturnCallback(function (string $channel, string $ts, string $emoji) use (&$reactions): void {
+                $reactions[] = $emoji;
+            });
+
+        $this->slackApi->method('postMessage')
+            ->willReturnCallback(function (string $channel, string $text) use (&$messages): void {
+                $messages[] = $text;
+            });
+
+        $this->router->handleEvent([
+            'type' => 'event_callback',
+            'event' => [
+                'type' => 'message',
+                'channel' => 'C1',
+                'user' => 'USELFUSER',
+                'ts' => '1700000000.0002',
+                'text' => 'thanks <@USELFUSER> ++ and <@UOTHERUSR> ++',
+            ],
+        ]);
+
+        $this->assertNull($this->storage->getScore('USELFUSER'));
+        $this->assertSame(['userId' => 'UOTHERUSR', 'score' => 2], $this->storage->getScore('UOTHERUSR'));
+
+        $this->assertCount(2, $reactions);
+        $this->assertContains('no_good', $reactions);
+        $this->assertContains('tada', $reactions);
+
+        $this->assertCount(2, $messages);
+        $this->assertNotEmpty(array_filter(
+            $messages,
+            static fn (string $m): bool => str_contains($m, "can't give yourself karma")
+        ));
+        $this->assertNotEmpty(array_filter(
+            $messages,
+            static fn (string $m): bool => str_contains($m, '<@UOTHERUSR> now has 2 points')
+        ));
+    }
+
     public function testMessageWithNoMentionDoesNothing(): void
     {
         $this->slackApi->expects($this->never())->method('addReaction');

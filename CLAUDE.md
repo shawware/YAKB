@@ -157,6 +157,8 @@ On a valid karma event, the bot does two things. It must do both within Slack's 
 
 The handler must return HTTP 200 to Slack quickly. All processing should finish within 3 seconds. If it does not, Slack will retry the request. At karma-bot scale, one synchronous handler easily fits this window. This handler does one storage write and two Slack API calls.
 
+**A user cannot give karma to themselves.** If the mentioned user is the same as the sender, the bot does not record an event or change any score. Instead it reacts with a different emoji (`no_good`) and replies that self-karma is not allowed. This check happens per mention. A message that mentions the sender and someone else still awards the other person normally.
+
 ### Unmatched and Root Requests
 
 The bot has no human-facing UI. It only answers Slack. A person may still land on the bare domain by accident, or a scanner may probe it.
