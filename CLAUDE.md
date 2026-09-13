@@ -1,24 +1,28 @@
 # Yet Another KarmaBot
 
-A Slack karma bot that monitors channels for `@user ++` patterns and maintains a running score per user. Designed to be deployed for three different clients from a single shared PHP codebase.
+YAKB is a Slack karma bot. It watches channels for `@user ++` patterns. It keeps a running score for each user.
 
-**First deployment target: Client 1 (DreamHost shared hosting).** Build and validate against Client 1 first; Clients 2 and 3 follow once the core logic is proven.
+One PHP codebase supports three different clients. Each client has its own thin entry point.
 
-## What It Does
+**Build for Client 1 first.** Client 1 uses DreamHost shared hosting. Prove the core logic on Client 1. Add Client 2 and Client 3 after that.
 
-- Monitors Slack channels for messages containing `@user` followed by one or more `+` signs
-- Awards points equal to the number of `+` signs
-- Persists scores and a full event log to a database
-- Responds in-channel with the user's new karma score and tier
-- Adds an emoji reaction to the triggering message as acknowledgement
-- Assigns karma tiers (Bronze / Silver / Gold / Platinum) based on cumulative score
-- Updates the user's Slack profile card with their current tier (Client 2 only)
-- Updates the user's Google Workspace Directory profile with their current tier (Client 3 only)
-- Exposes slash commands for querying scores, history, and leaderboards
+## What The Bot Does
+
+- The bot watches Slack channels for messages that contain `@user` and one or more `+` signs.
+- The bot adds points equal to the number of `+` signs.
+- The bot saves scores and a full event log to a database.
+- The bot replies in the channel with the user's new score and tier.
+- The bot adds an emoji reaction to the message that triggered the event.
+- The bot assigns a karma tier (Bronze, Silver, Gold, or Platinum) based on the score.
+- The bot updates the user's Slack profile card with the current tier. This applies to Client 2 only.
+- The bot updates the user's Google Workspace Directory profile with the current tier. This applies to Client 3 only.
+- The bot answers slash commands for scores, history, and leaderboards.
 
 ## Architecture
 
-Single PHP codebase with pluggable storage adapters and thin client-specific entry points. Only front-controller/entry-point files live under `public/` — everything else (business logic, storage adapters, vendor dependencies) sits outside the web-exposed directory.
+The codebase is one PHP project. It has pluggable storage adapters. It has one thin entry point per client.
+
+Only front-controller files sit under `public/`. All other code sits outside `public/`. This includes business logic, storage adapters, and the Composer `vendor/` folder. No web request can reach these files directly.
 
 ```
 karmabot/
@@ -48,34 +52,40 @@ karmabot/
 
 ### Slack Integration
 
-All clients use the **Slack Events API** (HTTP webhooks) rather than Socket Mode. Slack POSTs events to a public URL; the handler processes and responds. Socket Mode is unsuitable for all deployment targets as none runs a persistent process.
+All clients use the Slack Events API. This means Slack sends HTTP webhooks to a public URL. The handler reads each webhook and responds.
 
-Slack sends a URL verification challenge when the Events API endpoint is first configured — the handler must be deployed and live before configuring this in the Slack app dashboard.
+No client uses Socket Mode. Socket Mode needs a persistent process. None of the three deployment targets runs a persistent process.
 
-**OAuth scopes required:**
+Slack sends a URL verification challenge on first setup. Deploy the handler before you add the Events API URL to the Slack app dashboard.
+
+**Required OAuth scopes:**
 
 | Scope | Purpose |
 |---|---|
 | `channels:history` | Read messages in public channels |
 | `groups:history` | Read messages in private channels |
-| `chat:write` | Post score responses |
-| `reactions:write` | Add emoji acknowledgement |
-| `users:read` | Resolve user ID to display name |
-| `users.profile:write` | Update karma tier on Slack profile card (Client 2 only) |
+| `chat:write` | Post score replies |
+| `reactions:write` | Add the emoji reaction |
+| `users:read` | Resolve a user ID to a display name |
+| `users.profile:write` | Update the karma tier on the Slack profile card. Client 2 only. |
 | `commands` | Register slash commands |
 
-**Credentials** — never in code, always in environment variables (loaded from `.env`, outside `public/`):
+**Credentials.** Never put credentials in code. Always put them in environment variables. Load these from `.env`, which sits outside `public/`.
 
 | Variable | Description |
 |---|---|
-| `SLACK_SIGNING_SECRET` | Verifies requests came from Slack (HMAC-SHA256 over the raw request body) |
-| `SLACK_BOT_TOKEN` | `xoxb-...` token for calling the Slack API |
+| `SLACK_SIGNING_SECRET` | Verifies that a request came from Slack. Uses HMAC-SHA256 over the raw request body. |
+| `SLACK_BOT_TOKEN` | The `xoxb-...` token. Use this to call the Slack API. |
 
-The bot must be invited into each channel it should monitor (`/invite @karmabot`).
+Invite the bot to each channel you want it to watch. Use `/invite @karmabot`.
 
 ### Karma Tiers
 
-Tiers are calculated from cumulative score in `src/Karma.php` and included in all bot responses. Client 2 also writes the tier to a custom Slack profile field whenever it changes. Client 3 writes the tier to a Google Workspace Directory custom user attribute whenever it changes.
+`src/Karma.php` calculates the tier from the cumulative score. Every bot reply shows the tier.
+
+Client 2 also writes the tier to a custom Slack profile field. It does this each time the tier changes.
+
+Client 3 writes the tier to a Google Workspace Directory custom attribute. It does this each time the tier changes.
 
 | Tier | Threshold |
 |---|---|
@@ -84,31 +94,33 @@ Tiers are calculated from cumulative score in `src/Karma.php` and included in al
 | Gold | 200 – 499 |
 | Platinum | 500+ |
 
-Client 2 requires a Slack workspace admin to define the custom profile field before tier profile writes will work. Client 3 requires a GWS admin to define a custom user attribute (e.g. "Karma Tier") in the Directory schema before tier writes will work.
+Client 2 needs a Slack workspace admin to create the custom profile field first. Tier writes will not work before that.
+
+Client 3 needs a GWS admin to create a custom user attribute first, for example "Karma Tier". Tier writes will not work before that.
 
 ### Slash Commands
 
-Registered in the Slack app dashboard. All commands POST to the same routing (`app.php`) as events, dispatched by path.
+Register slash commands in the Slack app dashboard. All commands POST to the same routing in `app.php`. The router dispatches each command by its path.
 
 | Command | Description |
 |---|---|
 | `/karma` | Your own score, tier, and leaderboard rank |
 | `/karma @user` | Another user's score and tier |
-| `/karma top` | Leaderboard, top N users |
-| `/karma history [@user]` | Recent karma events — who gave to whom |
-| `/karma month [@user]` | Points accrued in the past 30 days |
+| `/karma top` | The leaderboard, top N users |
+| `/karma history [@user]` | Recent karma events: who gave points to whom |
+| `/karma month [@user]` | Points earned in the past 30 days |
 
 ### Data Model
 
-Two tables, common to all storage backends:
+All three storage backends use the same two tables.
 
-**scores** — current karma totals
+**scores** — the current karma total for each user
 - `user_id` (partition key / primary key)
 - `username`
 - `score`
 - `tier`
 
-**events** — full audit log; enables history queries and score recalculation
+**events** — the full audit log. This log supports history queries and score recalculation.
 - `id`
 - `from_user`
 - `to_user`
@@ -116,91 +128,98 @@ Two tables, common to all storage backends:
 - `channel`
 - `timestamp`
 
-`storage/StorageInterface.php` must expose `getEvents(userId, since)` for date-range history queries. MySQL uses a standard index on `timestamp`; DynamoDB requires a **Global Secondary Index on `timestamp`** — add this at table creation time, it cannot be added without rebuilding the table. Firestore uses a **composite index on `(user_id, timestamp)`** — define this in `firestore.indexes.json` before deploying, as range queries across two fields require it.
+`storage/StorageInterface.php` must expose a method `getEvents(userId, since)`. This method supports date-range history queries.
+
+MySQL needs a standard index on `timestamp`.
+
+DynamoDB needs a Global Secondary Index on `timestamp`. Add this index when you create the table. You cannot add it later without rebuilding the table.
+
+Firestore needs a composite index on `(user_id, timestamp)`. Define this index in `firestore.indexes.json` before you deploy. Range queries across two fields need this index.
 
 ### Response Behaviour
 
-On a valid karma event the bot does two things within the Slack 3-second response window:
-1. Adds an emoji reaction to the original message
-2. Posts a message in the channel with the user's updated score
+On a valid karma event, the bot does two things. It must do both within Slack's 3-second response window.
 
-The Lambda/DreamHost/Cloud Run handler must acknowledge Slack's POST with HTTP 200 quickly. All processing should complete within 3 seconds or Slack will retry. At karma-bot scale a single synchronous handler (storage write + two Slack API calls) comfortably fits this window.
+1. The bot adds an emoji reaction to the original message.
+2. The bot posts a message in the channel with the updated score.
+
+The handler must return HTTP 200 to Slack quickly. All processing should finish within 3 seconds. If it does not, Slack will retry the request. At karma-bot scale, one synchronous handler easily fits this window. This handler does one storage write and two Slack API calls.
 
 ---
 
 ## Client 1 (first deploy)
 
-**Profile:** Slack free tier, Google Workspace (paid), DreamHost shared hosting with MySQL.
+**Profile:** Slack free tier. Google Workspace, paid. DreamHost shared hosting with MySQL.
 
-**Runtime:** Native PHP via Apache/`mod_php` (or `php-fpm` if available on the plan) — DreamHost does **not** support Phusion Passenger; confirmed via DreamHost's own [supported technologies](https://help.dreamhost.com/hc/en-us/articles/217141627-Supported-and-unsupported-technologies) page. No WSGI/CGI adapter is needed since PHP is DreamHost's natively supported language.
+**Runtime:** Native PHP, through Apache `mod_php` (or `php-fpm`, if the plan supports it). DreamHost does not support Phusion Passenger. See DreamHost's own [supported technologies](https://help.dreamhost.com/hc/en-us/articles/217141627-Supported-and-unsupported-technologies) page. No adapter is needed, because PHP is DreamHost's native supported language.
 
-**Entry point:** `public/index.php` — the domain's document root points at `public/`; `index.php` is the only web-exposed file and routes requests into `app.php` / `src/`.
+**Entry point:** `public/index.php`. Point the domain's document root at `public/`. `index.php` is the only web-exposed file. It routes each request into `app.php` and `src/`.
 
-**Storage:** MySQL on shared hosting via PDO (`pdo_mysql`). Zero marginal cost — already provisioned.
+**Storage:** MySQL on shared hosting, through PDO (`pdo_mysql`). This costs nothing extra. DreamHost already provides it.
 
-**Deployment:** SFTP/git, same as your other DreamHost PHP apps. Dependencies installed via Composer (`composer install`) into `vendor/`, kept outside `public/`.
+**Deployment:** SFTP or git, the same as your other DreamHost PHP apps. Install dependencies with Composer (`composer install`). Composer writes them to `vendor/`, outside `public/`.
 
 **Key constraints:**
-- Confirm the host permits inbound webhooks from external IPs before configuring Events API
-- Karma tiers displayed in bot responses only — custom profile fields not available on Slack free tier
-- `.env` lives alongside `composer.json` at the project root, outside `public/` — loaded via `vlucas/phpdotenv`
+- Confirm that the host allows inbound webhooks from external IPs. Do this before you configure the Events API.
+- Slack's free tier does not support custom profile fields. So karma tiers appear in bot replies only, not on the profile card.
+- Keep `.env` next to `composer.json`, at the project root, outside `public/`. Load it with `vlucas/phpdotenv`.
 
 ---
 
 ## Client 2
 
-**Profile:** Slack paid tier, Google Workspace (paid), AWS partner.
+**Profile:** Slack paid tier. Google Workspace, paid. AWS partner.
 
-**Runtime:** AWS Lambda. Entry point: `handlers/lambda_handler.php`, run via a custom PHP runtime layer using **Bref** (`bref/bref`), which adapts Lambda/API Gateway events into a standard HTTP request/response for the shared routing in `app.php`.
+**Runtime:** AWS Lambda. The entry point is `handlers/lambda_handler.php`. It runs on a custom PHP runtime layer, built with Bref (`bref/bref`). Bref converts each Lambda/API Gateway event into a standard HTTP request. `app.php` then handles that request the normal way.
 
-**Storage:** DynamoDB via `aws/aws-sdk-php`. Within always-free tier at karma-bot scale (25GB storage, 25 RCU/WCU). The `events` table requires a Global Secondary Index on `timestamp` — create this when the table is first provisioned.
+**Storage:** DynamoDB, through `aws/aws-sdk-php`. At karma-bot scale, this stays inside the AWS always-free tier (25GB storage, 25 RCU/WCU). The `events` table needs a Global Secondary Index on `timestamp`. Create this index when you first provision the table.
 
 **Infrastructure:**
-- API Gateway (HTTP API) → Lambda (Bref custom runtime) → DynamoDB
-- Lambda execution role requires DynamoDB read/write and CloudWatch logging permissions
-- IAM role creation permissions required during initial setup — coordinate with AWS admin if restricted
+- API Gateway (HTTP API) calls Lambda. Lambda (Bref custom runtime) calls DynamoDB.
+- The Lambda execution role needs DynamoDB read/write permissions and CloudWatch logging permissions.
+- Initial setup needs IAM role creation permissions. Coordinate with an AWS admin if your account restricts this.
 
-**Karma tiers:** Full support. Workspace admin must define a custom profile field (e.g. "Karma Tier") before the bot can write to it. The bot updates this field whenever a user's tier changes.
+**Karma tiers:** Full support. A workspace admin must first create a custom profile field, for example "Karma Tier". The bot then updates this field each time a user's tier changes.
 
-**Deployment:** Serverless Framework or SAM with Bref's plugin/layer. Environment variables (`SLACK_SIGNING_SECRET`, `SLACK_BOT_TOKEN`) set as Lambda environment variables.
+**Deployment:** Use the Serverless Framework or SAM, with Bref's plugin or layer. Set `SLACK_SIGNING_SECRET` and `SLACK_BOT_TOKEN` as Lambda environment variables.
 
-**Cost:** Effectively zero. Well within AWS free tier and likely covered by AWS partner credits regardless.
+**Cost:** Effectively zero. This stays well within the AWS free tier. AWS partner credits likely cover it regardless.
 
 ---
 
 ## Client 3
 
-**Profile:** Slack paid tier, Google Workspace (paid), GCP partner.
+**Profile:** Slack paid tier. Google Workspace, paid. GCP partner.
 
-**Runtime:** Cloud Run. Entry point: `public/index.php`, served via a PHP container (`php:8.3-apache` or `php:8.3-cli` + built-in server) built from a project `Dockerfile`. Cloud Run runs the container directly — no adapter library required, since the container just serves normal HTTP.
+**Runtime:** Cloud Run. The entry point is `public/index.php`. A `Dockerfile` builds a PHP container (`php:8.3-apache`, or `php:8.3-cli` with the built-in server) to serve it. Cloud Run runs this container directly. No adapter library is needed, because the container serves plain HTTP.
 
-**Storage:** Firestore via `google/cloud-firestore`. Serverless, scales to zero, within GCP free tier at karma-bot scale. The `events` collection requires a **composite index on `(user_id, timestamp)`** — define in `firestore.indexes.json` and deploy before first use.
+**Storage:** Firestore, through `google/cloud-firestore`. This is serverless. It scales to zero. At karma-bot scale, it stays within the GCP free tier. The `events` collection needs a composite index on `(user_id, timestamp)`. Define this in `firestore.indexes.json`. Deploy it before first use.
 
 **Infrastructure:**
-- Cloud Run → Firestore
-- Service account requires Firestore read/write and Cloud Logging permissions
-- For GWS Directory writes: service account must be granted domain-wide delegation in the GWS Admin console and the Admin SDK Directory API must be enabled in the GCP project; use `google/apiclient` for the Directory API calls
+- Cloud Run calls Firestore.
+- The service account needs Firestore read/write permissions and Cloud Logging permissions.
+- For GWS Directory writes: grant the service account domain-wide delegation in the GWS Admin console. Enable the Admin SDK Directory API in the GCP project. Use `google/apiclient` to call the Directory API.
 
-**Karma tiers:** Full support. GWS admin must define a custom user attribute (e.g. "Karma Tier") in the Directory schema before the bot can write to it. The bot updates this attribute whenever a user's tier changes.
+**Karma tiers:** Full support. A GWS admin must first create a custom user attribute, for example "Karma Tier", in the Directory schema. The bot then updates this attribute each time a user's tier changes.
 
-**Deployment:** `gcloud run deploy` or Cloud Build, building the project's `Dockerfile`. Environment variables (`SLACK_SIGNING_SECRET`, `SLACK_BOT_TOKEN`) set as Cloud Run environment variables, ideally sourced from Secret Manager.
+**Deployment:** Use `gcloud run deploy` or Cloud Build. Build from the project's `Dockerfile`. Set `SLACK_SIGNING_SECRET` and `SLACK_BOT_TOKEN` as Cloud Run environment variables. Source them from Secret Manager where possible.
 
-**Cost:** Effectively zero. Well within GCP free tier and likely covered by GCP partner credits regardless.
+**Cost:** Effectively zero. This stays well within the GCP free tier. GCP partner credits likely cover it regardless.
 
 ---
 
 ## Slack App Setup (all clients)
 
-1. Create app at api.slack.com — requires a Slack account, not necessarily workspace admin
-2. Add a Bot User
-3. Configure OAuth scopes (see above; omit `users.profile:write` for Client 1)
-4. Register slash commands in the app dashboard
-5. Deploy the handler first, then configure the Events API endpoint URL
-6. Subscribe to `message.channels` (and `message.groups` if private channels needed)
-7. Install to workspace — requires workspace admin approval
-8. Client 2 only: Slack workspace admin defines the "Karma Tier" custom profile field
-9. Client 3 only: GWS admin defines the "Karma Tier" custom user attribute in the Directory schema; GCP service account granted domain-wide delegation
-10. Invite bot to channels: `/invite @karmabot`
+1. Create the app at api.slack.com. This needs a Slack account. It does not need workspace admin rights.
+2. Add a Bot User.
+3. Configure the OAuth scopes. See the table above. Omit `users.profile:write` for Client 1.
+4. Register the slash commands in the app dashboard.
+5. Deploy the handler first. Configure the Events API endpoint URL after that.
+6. Subscribe to `message.channels`. Also subscribe to `message.groups`, if you need private channels.
+7. Install the app to the workspace. This needs workspace admin approval.
+8. Client 2 only: ask a Slack workspace admin to define the "Karma Tier" custom profile field.
+9. Client 3 only: ask a GWS admin to define the "Karma Tier" custom user attribute in the Directory schema. Grant the GCP service account domain-wide delegation.
+10. Invite the bot to each channel: `/invite @karmabot`.
 
 ---
 
@@ -208,43 +227,49 @@ The Lambda/DreamHost/Cloud Run handler must acknowledge Slack's POST with HTTP 2
 
 | Package | Purpose |
 |---|---|
-| `vlucas/phpdotenv` | Loads `.env` from outside `public/`, all clients |
-| `guzzlehttp/guzzle` | HTTP client for calling the Slack Web API |
-| `pdo_mysql` (PHP extension) | Client 1 MySQL storage adapter |
-| `aws/aws-sdk-php` | Client 2 DynamoDB storage adapter |
-| `bref/bref` | Runs the app as a Lambda custom runtime (Client 2) |
-| `google/cloud-firestore` | Client 3 Firestore storage adapter |
-| `google/apiclient` | Client 3 GWS Directory API (tier profile writes) |
+| `vlucas/phpdotenv` | Loads `.env` from outside `public/`. All clients use this. |
+| `guzzlehttp/guzzle` | The HTTP client for calls to the Slack Web API. |
+| `pdo_mysql` (PHP extension) | The Client 1 MySQL storage adapter. |
+| `aws/aws-sdk-php` | The Client 2 DynamoDB storage adapter. |
+| `bref/bref` | Runs the app as a Lambda custom runtime. Client 2 only. |
+| `google/cloud-firestore` | The Client 3 Firestore storage adapter. |
+| `google/apiclient` | The Client 3 GWS Directory API client. Writes tier profile updates. |
 
 ---
 
-## Deployment Model: Single-Tenant vs. Multi-Tenant
+## Deployment Model: One Workspace vs. Many Workspaces
 
-YAKB is intended as a self-hosted open-source project: anyone can clone the repo, pick a storage adapter, and run their own instance. Slack has no concept of "storage" — it only POSTs events to whatever URL an app's Events API is configured with, and which storage backend that URL's server uses is entirely a property of what code is deployed there, decided by the operator, never by Slack or by the installing workspace.
+YAKB is a self-hosted, open-source project. Anyone can clone the repo. They can pick a storage adapter. They can run their own instance.
 
-There are two supportable deployment shapes for someone (including a single operator) who wants to run YAKB against more than one Slack workspace. **Option A is the current default.** Option B is documented here as a known migration path, not yet implemented.
+Slack has no concept of storage. Slack only sends events to whatever URL an app's Events API points at. The code behind that URL decides which storage backend to use. The operator makes this choice, not Slack, and not the installing workspace.
+
+There are two ways to run YAKB against more than one Slack workspace. This applies even when one operator runs both. **Option A is the current default.** Option B is a known future path. It is not built yet.
 
 ### Option A — one deployment per workspace (current default)
 
-Each Slack workspace gets its own fully separate deployment: its own handler process, its own database, its own Slack app installation, one `SLACK_BOT_TOKEN` set as a single env var. This matches the existing Client 1/2/3 model exactly — no OAuth install flow is needed, no workspace-identifying data ever needs to be threaded through the storage layer, and there is no cross-workspace isolation risk because each deployment can only ever reach one workspace's data.
+Each Slack workspace gets its own full deployment: its own handler process, its own database, its own Slack app install, and one `SLACK_BOT_TOKEN` env var. This matches the Client 1, 2, and 3 model above.
 
-**Trade-off:** infrastructure cost and operational overhead scale linearly with the number of workspaces (N workspaces = N deployments = N databases).
+This approach needs no OAuth install flow. No workspace ID needs to travel through the storage layer. Each deployment can reach only one workspace's data, so there is no risk of data crossing between workspaces.
 
-### Option B — one shared deployment across multiple workspaces
+**Trade-off:** infrastructure cost rises with each new workspace. N workspaces need N deployments and N databases.
 
-A single deployment (one handler process, one database) serves multiple Slack workspaces, distinguished by the `team_id` Slack includes on every event and slash-command payload. This is more resource-efficient but requires real new infrastructure:
+### Option B — one shared deployment for many workspaces
 
-- **`installations` table** (`team_id` → encrypted bot token), replacing the single `SLACK_BOT_TOKEN` env var. Populated via a Slack OAuth v2 install flow: a new `/slack/oauth/callback` route exchanges the one-time `code` Slack redirects with for a bot token (via `oauth.v2.access`), using new `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` credentials (static, one pair per app registration, from the app's Basic Information page — distinct from the per-workspace bot tokens).
-- **`team_id` as a partition key** on `scores` (composite key `(team_id, user_id)`) and as a column on `events`, threaded through every `storage/StorageInterface.php` method (`getScore`, `recordEvent`, `getEvents`, etc.) so isolation is enforced structurally rather than by convention at each call site. DynamoDB's `timestamp` GSI and Firestore's `(user_id, timestamp)` composite index both need `team_id` folded in.
-- **Revocation on uninstall** — handle Slack's `app_uninstalled` event by deleting that workspace's `installations` row immediately.
+One deployment, with one handler process and one database, serves many Slack workspaces. Each event carries a `team_id` field from Slack. The app uses this field to tell workspaces apart.
 
-**Migrating from A to B later:** additive, not a rewrite. Backfill `team_id` on existing rows (trivial — each pre-existing single-tenant DB only ever held one workspace's data, so every row gets the same known value), merge databases if both deployments already share a storage backend (crossing backends, e.g. MySQL to DynamoDB, is the one genuinely harder case), add the OAuth route and `installations` table, repoint both workspaces' Events API URLs at the surviving deployment, and re-run each through the OAuth flow once to populate proper per-workspace tokens.
+This approach uses fewer resources. It needs real new infrastructure:
 
-### Security handling for Option B's `installations` table
+- An `installations` table. It maps `team_id` to an encrypted bot token. This table replaces the single `SLACK_BOT_TOKEN` env var. A Slack OAuth v2 install flow fills this table. A new route, `/slack/oauth/callback`, exchanges a one-time `code` for a bot token, through Slack's `oauth.v2.access` endpoint. This flow needs new `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` credentials. Get these from the app's Basic Information page. Each app has one such pair. This differs from the per-workspace bot tokens.
+- A `team_id` field, used as a partition key. Add it to `scores` (the key becomes `(team_id, user_id)`) and as a column on `events`. Thread this field through every method in `storage/StorageInterface.php`: `getScore`, `recordEvent`, `getEvents`, and others. This makes isolation a structural property of the code, not a rule that each call site must remember. DynamoDB's `timestamp` index and Firestore's `(user_id, timestamp)` index must both include `team_id` too.
+- Revocation on uninstall. Slack sends an `app_uninstalled` event. When this event arrives, delete that workspace's row from `installations` at once.
 
-Storing other workspaces' live bot tokens in a shared table is a materially bigger responsibility than one deploy-time env var, and needs to be handled accordingly:
+**Migrating from Option A to Option B later:** This is additive work, not a rewrite. First, backfill `team_id` on existing rows. This step is easy, because each single-tenant database already holds only one workspace's data, so every row gets the same known value. Next, merge the databases, if both deployments already use the same storage backend. Crossing backends, for example MySQL to DynamoDB, is the one genuinely hard case. Then add the OAuth route and the `installations` table. Then point both workspaces' Events API URLs at the one surviving deployment. Finally, run each workspace through the OAuth flow once, to store its own token.
 
-- **Encrypt the token at rest**, not just rely on disk-level DB encryption — protects against a compromised DB read path (leaked connection string, over-permissioned tooling, injection elsewhere in the app), not just a stolen disk. PHP's built-in `sodium` extension (`sodium_crypto_secretbox`), or the `defuse/php-encryption` library for a higher-level API, with the key held outside the DB (env var at minimum; AWS KMS / GCP Secret Manager preferred where available) is sufficient — store ciphertext in MySQL/DynamoDB/Firestore, decrypt only in memory at the moment of a Slack API call.
-- **Split DB access by role, least-privilege.** The webhook/event-processing path only ever needs `SELECT` on `installations` (token lookup per incoming event) — it never needs to write there. Only the OAuth callback route (install) and the uninstall handler (delete) need write access. Use two DB users/roles rather than one shared app user with full CRUD on the table, so a bug or compromise in the (much larger, more exposed) event-parsing code path can't insert, alter, or wipe other workspaces' tokens.
-- **Never log the token**, and keep `installations` separate from any table that might be casually exported or queried by debugging tooling.
-- **Rotate the encryption key** by re-encrypting all stored tokens if the key is ever suspected compromised; keep the key out of DB backups.
+### Security for Option B's `installations` table
+
+Storing other workspaces' live bot tokens is a bigger responsibility than one env var. Handle it with care.
+
+- **Encrypt the token at rest.** Do not rely only on disk-level database encryption. Encryption at the application level also protects against a compromised read path: a leaked connection string, an over-permissioned tool, or an injection bug elsewhere in the app. Use PHP's built-in `sodium` extension (`sodium_crypto_secretbox`), or the `defuse/php-encryption` library for a simpler API. Keep the encryption key outside the database. At minimum, use an env var. Where possible, use AWS KMS or GCP Secret Manager instead. Store only ciphertext in MySQL, DynamoDB, or Firestore. Decrypt only in memory, only at the moment of a Slack API call.
+- **Split database access by role.** Follow least privilege. The webhook path only needs `SELECT` on `installations`, to look up a token. It never needs to write there. Only the OAuth callback route (install) and the uninstall handler (delete) need write access. Use two database users or roles, not one shared user with full read and write access. This way, a bug or a compromise in the larger, more exposed event-parsing code cannot insert, change, or delete another workspace's token.
+- **Never log the token.** Keep `installations` separate from any table that debugging tools might export or query casually.
+- **Rotate the encryption key if you suspect it is compromised.** Re-encrypt every stored token under the new key. Keep the key out of database backups.
