@@ -41,7 +41,7 @@ karmabot/
 │   ├── DynamoDbStorage.php      # Client 2
 │   └── FirestoreStorage.php     # Client 3
 │
-├── app.php                      # shared routing (Slack events + slash commands), included by each entry point
+├── yakb.php                      # shared routing (Slack events + slash commands), included by each entry point
 │
 ├── public/                      # web-exposed directory — Client 1 & 3 document root
 │   └── index.php                # front controller
@@ -83,6 +83,10 @@ Invite the bot to each channel you want it to watch. Use `/invite @karmabot`.
 
 `src/Karma.php` calculates the tier from the cumulative score. Every bot reply shows the tier.
 
+Tier is derived data. It is never stored. Storage holds only the score. Every place that needs a tier calls `Karma::tierForScore($score)` at the moment it needs it. This keeps a stored tier from drifting out of sync with its score, and it means a change to `config/tiers.php` takes effect at once, for every user, with no backfill step.
+
+To detect a tier change (Client 2 and Client 3 need this — see below), compute the tier from the score before the event and from the score after the event, then compare the two. Do this at the point where the event is handled (`yakb.php`), not inside storage. Storage only ever deals with scores.
+
 Client 2 also writes the tier to a custom Slack profile field. It does this each time the tier changes.
 
 Client 3 writes the tier to a Google Workspace Directory custom attribute. It does this each time the tier changes.
@@ -104,7 +108,7 @@ Client 3 needs a GWS admin to create a custom user attribute first, for example 
 
 ### Slash Commands
 
-Register slash commands in the Slack app dashboard. All commands POST to the same routing in `app.php`. The router dispatches each command by its path.
+Register slash commands in the Slack app dashboard. All commands POST to the same routing in `yakb.php`. The router dispatches each command by its path.
 
 | Command | Description |
 |---|---|
@@ -122,7 +126,8 @@ All three storage backends use the same two tables.
 - `user_id` (partition key / primary key)
 - `username`
 - `score`
-- `tier`
+
+There is no `tier` column. Tier is derived from `score` at read time via `Karma::tierForScore()`. It is never stored — see "Karma Tiers" above.
 
 **events** — the full audit log. This log supports history queries and score recalculation.
 - `id`
@@ -167,7 +172,7 @@ Every real route (`/slack/events`, `/slack/commands`) must still check the Slack
 
 **Runtime:** Native PHP, through Apache `mod_php` (or `php-fpm`, if the plan supports it). DreamHost does not support Phusion Passenger. See DreamHost's own [supported technologies](https://help.dreamhost.com/hc/en-us/articles/217141627-Supported-and-unsupported-technologies) page. No adapter is needed, because PHP is DreamHost's native supported language.
 
-**Entry point:** `public/index.php`. Point the domain's document root at `public/`. `index.php` is the only web-exposed file. It routes each request into `app.php` and `src/`.
+**Entry point:** `public/index.php`. Point the domain's document root at `public/`. `index.php` is the only web-exposed file. It routes each request into `yakb.php` and `src/`.
 
 **Storage:** MySQL on shared hosting, through PDO (`pdo_mysql`). This costs nothing extra. DreamHost already provides it.
 
@@ -184,7 +189,7 @@ Every real route (`/slack/events`, `/slack/commands`) must still check the Slack
 
 **Profile:** Slack paid tier. Google Workspace, paid. AWS partner.
 
-**Runtime:** AWS Lambda. The entry point is `handlers/lambda_handler.php`. It runs on a custom PHP runtime layer, built with Bref (`bref/bref`). Bref converts each Lambda/API Gateway event into a standard HTTP request. `app.php` then handles that request the normal way.
+**Runtime:** AWS Lambda. The entry point is `handlers/lambda_handler.php`. It runs on a custom PHP runtime layer, built with Bref (`bref/bref`). Bref converts each Lambda/API Gateway event into a standard HTTP request. `yakb.php` then handles that request the normal way.
 
 **Storage:** DynamoDB, through `aws/aws-sdk-php`. At karma-bot scale, this stays inside the AWS always-free tier (25GB storage, 25 RCU/WCU). The `events` table needs a Global Secondary Index on `timestamp`. Create this index when you first provision the table.
 
