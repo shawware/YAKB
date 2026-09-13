@@ -183,6 +183,7 @@ Every real route (`/slack/events`, `/slack/commands`) must still check the Slack
 - Confirm that the host allows inbound webhooks from external IPs. Do this before you configure the Events API.
 - Slack's free tier does not support custom profile fields. So karma tiers appear in bot replies only, not on the profile card.
 - Keep `.env` next to `composer.json`, at the project root, outside `public/`. Load it with `vlucas/phpdotenv`.
+- DreamHost disables the `putenv()` function. `vlucas/phpdotenv` needs `putenv()` to make a loaded value visible to `getenv()`. Without it, `.env` still loads correctly into `$_ENV` and `$_SERVER`, but `getenv()` silently returns `false` for every value. Read config through `envValue()` in `env.php`, not through `getenv()` directly — it checks `$_ENV` and `$_SERVER` first.
 
 ---
 

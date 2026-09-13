@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../env.php';
 
 use Shawware\Yakb\Storage\MigrationRunner;
 
@@ -11,11 +12,11 @@ if (is_file($dotenvPath . '/.env')) {
     Dotenv\Dotenv::createImmutable($dotenvPath)->load();
 }
 
-$dsn = getenv('DB_DSN');
-$user = getenv('DB_USER') ?: null;
-$pass = getenv('DB_PASS') ?: null;
+$dsn = envValue('DB_DSN');
+$user = envValue('DB_USER');
+$pass = envValue('DB_PASS');
 
-if ($dsn === false || $dsn === '') {
+if ($dsn === null || $dsn === '') {
     fwrite(STDERR, "DB_DSN is not set (check your .env or environment).\n");
     exit(1);
 }

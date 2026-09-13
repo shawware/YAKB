@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../yakb.php';
+require __DIR__ . '/../env.php';
 
 use Shawware\Yakb\Karma;
 use Shawware\Yakb\Parser;
@@ -35,9 +36,9 @@ if ($path !== '/slack/events' && $path !== '/slack/commands') {
 $rawBody = (string) file_get_contents('php://input');
 $timestamp = $_SERVER['HTTP_X_SLACK_REQUEST_TIMESTAMP'] ?? '';
 $signature = $_SERVER['HTTP_X_SLACK_SIGNATURE'] ?? '';
-$signingSecret = (string) getenv('SLACK_SIGNING_SECRET');
+$signingSecret = (string) envValue('SLACK_SIGNING_SECRET');
 
-$slackApi = new SlackApi(new GuzzleHttp\Client(), (string) getenv('SLACK_BOT_TOKEN'));
+$slackApi = new SlackApi(new GuzzleHttp\Client(), (string) envValue('SLACK_BOT_TOKEN'));
 
 if (!$slackApi->verifySignature($signingSecret, $timestamp, $rawBody, $signature)) {
     http_response_code(401);
@@ -47,9 +48,9 @@ if (!$slackApi->verifySignature($signingSecret, $timestamp, $rawBody, $signature
 }
 
 $pdo = new PDO(
-    (string) getenv('DB_DSN'),
-    getenv('DB_USER') ?: null,
-    getenv('DB_PASS') ?: null,
+    (string) envValue('DB_DSN'),
+    envValue('DB_USER'),
+    envValue('DB_PASS'),
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
 );
 
