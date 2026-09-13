@@ -43,6 +43,7 @@ karmabot/
 │   └── FirestoreStorage.php     # Client 3
 │
 ├── yakb.php                      # shared routing (Slack events + slash commands), included by each entry point
+├── env.php                      # envValue() — reads config from $_ENV/$_SERVER, not getenv() (see Client 1's key constraints)
 │
 ├── public/                      # web-exposed directory — Client 1 & 3 document root
 │   └── index.php                # front controller

@@ -41,11 +41,14 @@ $signingSecret = (string) envValue('SLACK_SIGNING_SECRET');
 $slackApi = new SlackApi(new GuzzleHttp\Client(), (string) envValue('SLACK_BOT_TOKEN'));
 
 if (!$slackApi->verifySignature($signingSecret, $timestamp, $rawBody, $signature)) {
+    error_log("[YAKB] signature verification FAILED for {$path} (timestamp={$timestamp})");
     http_response_code(401);
     header('Content-Type: text/plain');
     echo 'Invalid signature';
     return;
 }
+
+error_log("[YAKB] signature verified for {$path}, body={$rawBody}");
 
 $pdo = new PDO(
     (string) envValue('DB_DSN'),
@@ -60,6 +63,14 @@ $router = new Router(new Parser(), $karma, $storage, $slackApi);
 
 if ($path === '/slack/events') {
     $payload = json_decode($rawBody, true);
+
+    error_log(sprintf(
+        '[YAKB] event payload type=%s event_type=%s text=%s',
+        $payload['type'] ?? 'n/a',
+        $payload['event']['type'] ?? 'n/a',
+        $payload['event']['text'] ?? 'n/a'
+    ));
+
     $challenge = $router->handleEvent(is_array($payload) ? $payload : []);
 
     if ($challenge !== null) {
