@@ -126,10 +126,11 @@ All three storage backends use the same two tables.
 
 **scores** — the current karma total for each user
 - `user_id` (partition key / primary key)
-- `username`
 - `score`
 
 There is no `tier` column. Tier is derived from `score` at read time via `Karma::tierForScore()`. It is never stored — see "Karma Tiers" above.
+
+There is no `username` column either. All clients render mentions as `<@userId>` in every bot reply, letting Slack's own client resolve and display the real name — so no username is ever stored. `users:read` is still a required OAuth scope (see "Slack Integration" above), but nothing currently calls it. Storing a resolved username here would mean storing personal data (PII) with no offsetting need, so it was dropped rather than populated.
 
 **events** — the full audit log. This log supports history queries and score recalculation.
 - `id`
