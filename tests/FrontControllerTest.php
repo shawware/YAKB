@@ -72,6 +72,16 @@ final class FrontControllerTest extends TestCase
         self::markTestSkipped('PHP built-in server did not become ready in time.');
     }
 
+    public function testRobotsTxtDisallowsEverything(): void
+    {
+        $response = self::$http->get('/robots.txt');
+
+        $this->assertSame(200, $response->getStatusCode());
+        // PHP appends its default_charset to a bare "text/plain" header.
+        $this->assertStringStartsWith('text/plain', $response->getHeaderLine('Content-Type'));
+        $this->assertSame("User-agent: *\nDisallow: /\n", (string) $response->getBody());
+    }
+
     public function testRootPathServesTheStaticPlaceholderWithoutTouchingTheDatabase(): void
     {
         $response = self::$http->get('/');

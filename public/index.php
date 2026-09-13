@@ -20,6 +20,14 @@ if (is_file($root . '/.env')) {
 
 $path = (string) (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
 
+// There's nothing here for a crawler to index — tell well-behaved bots
+// not to bother, before they even reach the generic placeholder below.
+if ($path === '/robots.txt') {
+    header('Content-Type: text/plain');
+    echo "User-agent: *\nDisallow: /\n";
+    return;
+}
+
 // Only these two paths do anything Slack-signed or touch the database.
 // Everything else — including the bare domain and any guessed/scanned
 // path — gets the static placeholder below and never connects to
