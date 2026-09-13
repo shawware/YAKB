@@ -87,6 +87,10 @@ Client 2 also writes the tier to a custom Slack profile field. It does this each
 
 Client 3 writes the tier to a Google Workspace Directory custom attribute. It does this each time the tier changes.
 
+Tiers and thresholds are configured, not hardcoded. `config/tiers.php` holds an ordered list of tiers, each with a `name` and a `min` score. `src/Karma.php` takes no built-in thresholds — it only knows how to walk whatever tier list it is given. An operator retunes tiers by editing `config/tiers.php`. No UI and no code change are needed.
+
+The shipped defaults, in `config/tiers.php`, are:
+
 | Tier | Threshold |
 |---|---|
 | Bronze | 1 – 49 |
@@ -144,6 +148,16 @@ On a valid karma event, the bot does two things. It must do both within Slack's 
 2. The bot posts a message in the channel with the updated score.
 
 The handler must return HTTP 200 to Slack quickly. All processing should finish within 3 seconds. If it does not, Slack will retry the request. At karma-bot scale, one synchronous handler easily fits this window. This handler does one storage write and two Slack API calls.
+
+### Unmatched and Root Requests
+
+The bot has no human-facing UI. It only answers Slack. A person may still land on the bare domain by accident, or a scanner may probe it.
+
+Serve a simple static page for the root path and for any unmatched path. Do not redirect. DreamHost shared hosting does not support a clean same-URL redirect for this case.
+
+The static page must not leak any information. Do not show a stack trace. Do not show a framework error page. Do not show which storage backend or which Slack workspace this instance serves.
+
+Every real route (`/slack/events`, `/slack/commands`) must still check the Slack request signature. Reject an invalid or missing signature with HTTP 401 or 400. This check applies even if someone guesses a valid route path.
 
 ---
 
