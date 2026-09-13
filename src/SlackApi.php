@@ -10,7 +10,7 @@ use GuzzleHttp\ClientInterface;
  * Verifies incoming Slack requests and makes the two outbound Slack Web
  * API calls the bot needs: posting a message and adding a reaction.
  */
-final class SlackApi
+final class SlackApi implements SlackApiInterface
 {
     private const BASE_URL = 'https://slack.com/api/';
 

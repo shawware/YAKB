@@ -33,6 +33,7 @@ karmabot/
 ├── src/
 │   ├── Parser.php               # regex, message parsing
 │   ├── Karma.php                # score logic, tier calculation, profile updates
+│   ├── SlackApiInterface.php    # abstract interface — lets Router be tested with a mock
 │   └── SlackApi.php             # posting messages, reactions, profile writes
 │
 ├── storage/
