@@ -106,7 +106,7 @@ final class Router
     {
         $score = $this->storage->getScore($userId)['score'] ?? 0;
         $tier = $this->karma->tierForScore($score);
-        $rank = $this->rankOf($userId);
+        $rank = $this->storage->getRank($userId);
 
         $tierText = $tier !== null ? ", tier {$tier}" : '';
         $rankText = $rank !== null ? ", rank #{$rank}" : '';
@@ -181,22 +181,6 @@ final class Router
         return $this->textResponse(
             "<@{$userId}> earned {$pointsReceived} points in the last " . self::MONTH_WINDOW_DAYS . ' days.'
         );
-    }
-
-    private function rankOf(string $userId): ?int
-    {
-        // Fetches the full leaderboard to find one user's rank. Fine at
-        // karma-bot scale (per CLAUDE.md); a dedicated getRank() storage
-        // method would be the fix if the user base ever grew large.
-        $top = $this->storage->getTopScores(PHP_INT_MAX);
-
-        foreach ($top as $index => $entry) {
-            if ($entry['userId'] === $userId) {
-                return $index + 1;
-            }
-        }
-
-        return null;
     }
 
     private function extractMentionedUserId(string $text): ?string

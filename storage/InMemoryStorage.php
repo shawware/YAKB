@@ -91,6 +91,24 @@ final class InMemoryStorage implements StorageInterface
         );
     }
 
+    public function getRank(string $userId): ?int
+    {
+        if (!array_key_exists($userId, $this->scores)) {
+            return null;
+        }
+
+        $score = $this->scores[$userId];
+        $higher = 0;
+
+        foreach ($this->scores as $otherScore) {
+            if ($otherScore > $score) {
+                $higher++;
+            }
+        }
+
+        return $higher + 1;
+    }
+
     /**
      * @return array{userId: string, score: int}
      */

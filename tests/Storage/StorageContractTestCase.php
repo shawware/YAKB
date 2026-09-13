@@ -92,4 +92,37 @@ abstract class StorageContractTestCase extends TestCase
             $top
         );
     }
+
+    public function testGetRankIsNullForAnUnknownUser(): void
+    {
+        $storage = $this->createStorage();
+
+        $this->assertNull($storage->getRank('U_UNKNOWN'));
+    }
+
+    public function testGetRankOrdersHighestScoreFirst(): void
+    {
+        $storage = $this->createStorage();
+
+        $storage->recordEvent('U_FROM', 'U_LOW', 1, 'C1');
+        $storage->recordEvent('U_FROM', 'U_HIGH', 150, 'C1');
+        $storage->recordEvent('U_FROM', 'U_MID', 10, 'C1');
+
+        $this->assertSame(1, $storage->getRank('U_HIGH'));
+        $this->assertSame(2, $storage->getRank('U_MID'));
+        $this->assertSame(3, $storage->getRank('U_LOW'));
+    }
+
+    public function testGetRankGivesTiedUsersTheSameRank(): void
+    {
+        $storage = $this->createStorage();
+
+        $storage->recordEvent('U_FROM', 'U_A', 10, 'C1');
+        $storage->recordEvent('U_FROM', 'U_B', 10, 'C1');
+        $storage->recordEvent('U_FROM', 'U_C', 5, 'C1');
+
+        $this->assertSame(1, $storage->getRank('U_A'));
+        $this->assertSame(1, $storage->getRank('U_B'));
+        $this->assertSame(3, $storage->getRank('U_C'));
+    }
 }

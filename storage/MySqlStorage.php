@@ -104,4 +104,18 @@ final class MySqlStorage implements StorageInterface
 
         return $top;
     }
+
+    public function getRank(string $userId): ?int
+    {
+        $score = $this->getScore($userId);
+
+        if ($score === null) {
+            return null;
+        }
+
+        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM scores WHERE score > ?');
+        $statement->execute([$score['score']]);
+
+        return ((int) $statement->fetchColumn()) + 1;
+    }
 }

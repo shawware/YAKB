@@ -63,4 +63,12 @@ interface StorageInterface
      * @return array<int, array{userId: string, score: int}>
      */
     public function getTopScores(int $limit): array;
+
+    /**
+     * A user's leaderboard rank: 1 + the number of users with a strictly
+     * higher score. Users tied on score share the same rank.
+     *
+     * @return int|null null if the user has no score on record yet.
+     */
+    public function getRank(string $userId): ?int;
 }
