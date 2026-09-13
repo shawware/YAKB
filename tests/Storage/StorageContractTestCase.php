@@ -67,8 +67,11 @@ abstract class StorageContractTestCase extends TestCase
         $events = $storage->getEvents('U_B', $since);
 
         $this->assertCount(2, $events);
-        $this->assertSame($newest, $events[0]['timestamp']);
-        $this->assertSame($middle, $events[1]['timestamp']);
+        // assertEquals, not assertSame: MySqlStorage round-trips the
+        // timestamp through a string and returns a new DateTimeImmutable
+        // instance, so object identity isn't preserved — only the value is.
+        $this->assertEquals($newest, $events[0]['timestamp']);
+        $this->assertEquals($middle, $events[1]['timestamp']);
     }
 
     public function testGetTopScoresOrdersDescendingAndRespectsLimit(): void
