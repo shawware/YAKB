@@ -1,6 +1,6 @@
 # Yet Another KarmaBot (YAKB)
 
-A Slack karma bot that watches channels for `@user ++` mentions and keeps a running score per person, with tiered recognition (Bronze/Silver/Gold/Platinum) as scores grow. Built as a single Python codebase deployed independently for different clients, each on its own hosting and storage stack.
+A Slack karma bot that watches channels for `@user ++` mentions and keeps a running score per person, with tiered recognition (Bronze/Silver/Gold/Platinum) as scores grow. Built as a single PHP codebase deployed independently for different clients, each on its own hosting and storage stack.
 
 ## Features
 
