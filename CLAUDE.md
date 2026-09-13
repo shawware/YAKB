@@ -243,6 +243,17 @@ Every real route (`/slack/events`, `/slack/commands`) must still check the Slack
 9. Client 3 only: ask a GWS admin to define the "Karma Tier" custom user attribute in the Directory schema. Grant the GCP service account domain-wide delegation.
 10. Invite the bot to each channel: `/invite @karmabot`.
 
+### Pitfalls From a Real Install
+
+These tripped up the first real install. Check them if slash commands or events stop arriving, even after the checklist above looks complete.
+
+- **Turn off Socket Mode.** Find "Socket Mode" in the app's sidebar and confirm it is off. If it is on, Slack delivers slash commands and events over a persistent WebSocket connection instead of to your Request URL. This project needs HTTP webhooks — see "Slack Integration" above for why. A symptom of Socket Mode being on: a slash command fails with "the app did not respond," and your server's access log shows no request for it at all. Socket Mode can be toggled on after your Events API URL already verified once, so a working install can silently break later if someone (or you) turns it on.
+- **"Incoming Webhooks" is a different feature. Do not use it.** It generates a URL for posting messages *into* Slack from an external system — the opposite direction of what this bot needs. The bot already posts messages using the bot token, through `chat.postMessage`. The feature this project needs is **Event Subscriptions**, a separate sidebar item.
+- **The bot token does not exist until after you install the app.** It is not on the "Basic Information" page. Find it on **OAuth & Permissions**, under "Bot User OAuth Token," only after you click **Install to Workspace** (or **Install App**) and approve it.
+- **"Client Secret" and "Verification Token," both on Basic Information, are not needed for this project.** Client Secret only matters for a full OAuth install flow (see "Deployment Model" above, Option B) — this project does not use one. Verification Token is an old, deprecated credential; Slack's current guidance is to use the Signing Secret instead, which this project already does.
+- **After you add a bot event subscription, click "Save Changes."** This is easy to miss — the field can look filled in without the change actually taking effect. Slack usually also asks you to reinstall the app after this kind of change; do that too.
+- **Being able to `@mention` the bot in a channel does not confirm events are being delivered.** It only confirms the bot is a channel member. Confirm delivery by checking your server's access log for the actual `POST /slack/events` or `POST /slack/commands` request.
+
 ---
 
 ## Dependencies (Composer)
