@@ -158,6 +158,8 @@ The handler must return HTTP 200 to Slack quickly. All processing should finish 
 
 **A user cannot give karma to themselves.** If the mentioned user is the same as the sender, the bot does not record an event or change any score. Instead it reacts with a different emoji (`no_good`) and replies that self-karma is not allowed. This check happens per mention. A message that mentions the sender and someone else still awards the other person normally.
 
+**The bot ignores its own messages.** The bot is a channel member, so its own replies are delivered back to it as ordinary message events. The handler skips any event with `subtype: bot_message` before parsing it, so it never reacts to its own output.
+
 ### Unmatched and Root Requests
 
 The bot has no human-facing UI. It only answers Slack. A person may still land on the bare domain by accident, or a scanner may probe it.

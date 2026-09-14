@@ -52,6 +52,13 @@ final class Router
             return null;
         }
 
+        // The bot's own replies are also delivered back as message events,
+        // since the bot is a channel member. Skip them — nothing here
+        // should ever react to the bot's own output.
+        if (($event['subtype'] ?? null) === 'bot_message') {
+            return null;
+        }
+
         $channel = (string) ($event['channel'] ?? '');
         $fromUser = (string) ($event['user'] ?? '');
         $messageTimestamp = (string) ($event['ts'] ?? '');

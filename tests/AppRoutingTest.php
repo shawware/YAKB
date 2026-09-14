@@ -157,6 +157,25 @@ final class AppRoutingTest extends TestCase
         $this->assertNull($this->storage->getScore('U_TO'));
     }
 
+    public function testBotMessageIsIgnoredEvenIfItLooksLikeAKarmaMention(): void
+    {
+        $this->slackApi->expects($this->never())->method('addReaction');
+        $this->slackApi->expects($this->never())->method('postMessage');
+
+        $this->router->handleEvent([
+            'type' => 'event_callback',
+            'event' => [
+                'type' => 'message',
+                'subtype' => 'bot_message',
+                'channel' => 'C1',
+                'ts' => '1699999999.0001',
+                'text' => '<@UTOUSER> ++',
+            ],
+        ]);
+
+        $this->assertNull($this->storage->getScore('UTOUSER'));
+    }
+
     public function testSlashCommandOwnScore(): void
     {
         $this->storage->recordEvent('U_OTHER', 'U_ME', 15, 'C1');
