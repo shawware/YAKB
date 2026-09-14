@@ -30,7 +30,7 @@ final class MigrationRunnerTest extends TestCase
         // Start from a clean slate so this test proves a fresh apply, not
         // just a no-op against tables another test already created.
         $this->pdo->exec('DROP TABLE IF EXISTS events');
-        $this->pdo->exec('DROP TABLE IF EXISTS scores');
+        $this->pdo->exec('DROP TABLE IF EXISTS karma');
         $this->pdo->exec('DROP TABLE IF EXISTS schema_migrations');
     }
 
@@ -39,10 +39,10 @@ final class MigrationRunnerTest extends TestCase
         $runner = new MigrationRunner($this->pdo, __DIR__ . '/../storage/migrations');
         $applied = $runner->run();
 
-        $this->assertSame(['001_create_scores.sql', '002_create_events.sql'], $applied);
+        $this->assertSame(['001_create_karma.sql', '002_create_events.sql'], $applied);
 
         $tables = $this->pdo->query("SHOW TABLES")->fetchAll(\PDO::FETCH_COLUMN);
-        $this->assertContains('scores', $tables);
+        $this->assertContains('karma', $tables);
         $this->assertContains('events', $tables);
 
         $indexes = $this->pdo->query('SHOW INDEX FROM events WHERE Key_name = \'idx_events_timestamp\'')
@@ -57,7 +57,7 @@ final class MigrationRunnerTest extends TestCase
         $firstRun = $runner->run();
         $secondRun = $runner->run();
 
-        $this->assertSame(['001_create_scores.sql', '002_create_events.sql'], $firstRun);
+        $this->assertSame(['001_create_karma.sql', '002_create_events.sql'], $firstRun);
         $this->assertSame([], $secondRun, 'a second run should apply nothing new');
 
         $count = (int) $this->pdo->query('SELECT COUNT(*) FROM schema_migrations')->fetchColumn();

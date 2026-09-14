@@ -15,15 +15,15 @@ namespace Shawware\Yakb\Storage;
  */
 final class InMemoryStorage implements StorageInterface
 {
-    /** @var array<string, int> userId => cumulative score */
-    private array $scores = [];
+    /** @var array<string, int> userId => cumulative karma */
+    private array $karma = [];
 
     /**
      * @var array<int, array{
      *     id: int,
      *     fromUser: string,
      *     toUser: string,
-     *     points: int,
+     *     karma: int,
      *     channel: string,
      *     timestamp: \DateTimeImmutable
      * }>
@@ -32,34 +32,34 @@ final class InMemoryStorage implements StorageInterface
 
     private int $nextEventId = 1;
 
-    public function getScore(string $userId): ?array
+    public function getKarma(string $userId): ?array
     {
-        if (!array_key_exists($userId, $this->scores)) {
+        if (!array_key_exists($userId, $this->karma)) {
             return null;
         }
 
-        return $this->scoreRecord($userId);
+        return $this->karmaRecord($userId);
     }
 
     public function recordEvent(
         string $fromUser,
         string $toUser,
-        int $points,
+        int $karma,
         string $channel,
         ?\DateTimeImmutable $occurredAt = null
     ): array {
-        $this->scores[$toUser] = ($this->scores[$toUser] ?? 0) + $points;
+        $this->karma[$toUser] = ($this->karma[$toUser] ?? 0) + $karma;
 
         $this->events[] = [
             'id' => $this->nextEventId++,
             'fromUser' => $fromUser,
             'toUser' => $toUser,
-            'points' => $points,
+            'karma' => $karma,
             'channel' => $channel,
             'timestamp' => $occurredAt ?? new \DateTimeImmutable(),
         ];
 
-        return $this->scoreRecord($toUser);
+        return $this->karmaRecord($toUser);
     }
 
     public function getEvents(string $userId, \DateTimeImmutable $since): array
@@ -79,15 +79,15 @@ final class InMemoryStorage implements StorageInterface
         return $matching;
     }
 
-    public function getTopScores(int $limit): array
+    public function getTopKarma(int $limit): array
     {
-        $scores = $this->scores;
-        arsort($scores);
+        $karma = $this->karma;
+        arsort($karma);
 
-        $top = array_slice($scores, 0, $limit, preserve_keys: true);
+        $top = array_slice($karma, 0, $limit, preserve_keys: true);
 
         return array_map(
-            fn (string $userId, int $score): array => $this->scoreRecord($userId),
+            fn (string $userId, int $karma): array => $this->karmaRecord($userId),
             array_keys($top),
             array_values($top)
         );
@@ -95,15 +95,15 @@ final class InMemoryStorage implements StorageInterface
 
     public function getRank(string $userId): ?int
     {
-        if (!array_key_exists($userId, $this->scores)) {
+        if (!array_key_exists($userId, $this->karma)) {
             return null;
         }
 
-        $score = $this->scores[$userId];
+        $karma = $this->karma[$userId];
         $higher = 0;
 
-        foreach ($this->scores as $otherScore) {
-            if ($otherScore > $score) {
+        foreach ($this->karma as $otherKarma) {
+            if ($otherKarma > $karma) {
                 $higher++;
             }
         }
@@ -112,13 +112,13 @@ final class InMemoryStorage implements StorageInterface
     }
 
     /**
-     * @return array{userId: string, score: int}
+     * @return array{userId: string, karma: int}
      */
-    private function scoreRecord(string $userId): array
+    private function karmaRecord(string $userId): array
     {
         return [
             'userId' => $userId,
-            'score' => $this->scores[$userId] ?? 0,
+            'karma' => $this->karma[$userId] ?? 0,
         ];
     }
 }

@@ -77,7 +77,7 @@ You need three things: a database, a MySQL user, and that user granted access to
 php bin/migrate.php
 ```
 
-This creates `scores`, `events`, and a `schema_migrations` tracking table. Safe to re-run — already-applied migrations are skipped.
+This creates `karma`, `events`, and a `schema_migrations` tracking table. Safe to re-run — already-applied migrations are skipped.
 
 ## 7. Confirm the site responds
 

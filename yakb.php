@@ -20,7 +20,7 @@ final class Router
     private const SELF_KARMA_EMOJI = 'no_good';
     private const HISTORY_WINDOW_DAYS = 30;
     private const MONTH_WINDOW_DAYS = 30;
-    private const TOP_SCORES_LIMIT = 10;
+    private const TOP_KARMA_LIMIT = 10;
 
     public function __construct(
         private readonly Parser $parser,
@@ -100,14 +100,14 @@ final class Router
         }
 
         $result = $this->storage->recordEvent($fromUser, $toUser, $karma, $channel);
-        $tier = $this->karma->tierForScore($result['score']);
+        $tier = $this->karma->tierForKarma($result['karma']);
         $tierText = $tier !== null ? " ({$tier})" : '';
         $cappedText = $capped ? " (capped at {$this->maxKarmaPerMessage} karma per message)" : '';
 
         $this->slackApi->addReaction($channel, $messageTimestamp, self::REACTION_EMOJI);
         $this->slackApi->postMessage(
             $channel,
-            "<@{$toUser}> now has {$result['score']} karma{$tierText}!{$cappedText}"
+            "<@{$toUser}> now has {$result['karma']} karma{$tierText}!{$cappedText}"
         );
     }
 
@@ -123,29 +123,29 @@ final class Router
         $text = trim((string) ($payload['text'] ?? ''));
 
         return match (true) {
-            $text === '' => $this->replyOwnScore($requestingUser),
-            $text === 'top' => $this->replyTopScores(),
+            $text === '' => $this->replyOwnKarma($requestingUser),
+            $text === 'top' => $this->replyTopKarma(),
             str_starts_with($text, 'history') => $this->replyHistory($text, $requestingUser),
             str_starts_with($text, 'month') => $this->replyMonth($text, $requestingUser),
-            default => $this->replyUserScore($text),
+            default => $this->replyUserKarma($text),
         };
     }
 
     /** @return array{response_type: string, text: string} */
-    private function replyOwnScore(string $userId): array
+    private function replyOwnKarma(string $userId): array
     {
-        $score = $this->storage->getScore($userId)['score'] ?? 0;
-        $tier = $this->karma->tierForScore($score);
+        $karma = $this->storage->getKarma($userId)['karma'] ?? 0;
+        $tier = $this->karma->tierForKarma($karma);
         $rank = $this->storage->getRank($userId);
 
         $tierText = $tier !== null ? ", tier {$tier}" : '';
         $rankText = $rank !== null ? ", rank #{$rank}" : '';
 
-        return $this->textResponse("You have {$score} karma{$tierText}{$rankText}.");
+        return $this->textResponse("You have {$karma} karma{$tierText}{$rankText}.");
     }
 
     /** @return array{response_type: string, text: string} */
-    private function replyUserScore(string $text): array
+    private function replyUserKarma(string $text): array
     {
         $userId = $this->extractMentionedUserId($text);
 
@@ -153,17 +153,17 @@ final class Router
             return $this->unknownUserResponse();
         }
 
-        $score = $this->storage->getScore($userId)['score'] ?? 0;
-        $tier = $this->karma->tierForScore($score);
+        $karma = $this->storage->getKarma($userId)['karma'] ?? 0;
+        $tier = $this->karma->tierForKarma($karma);
         $tierText = $tier !== null ? ", tier {$tier}" : '';
 
-        return $this->textResponse("<@{$userId}> has {$score} karma{$tierText}.");
+        return $this->textResponse("<@{$userId}> has {$karma} karma{$tierText}.");
     }
 
     /** @return array{response_type: string, text: string} */
-    private function replyTopScores(): array
+    private function replyTopKarma(): array
     {
-        $top = $this->storage->getTopScores(self::TOP_SCORES_LIMIT);
+        $top = $this->storage->getTopKarma(self::TOP_KARMA_LIMIT);
 
         if ($top === []) {
             return $this->textResponse('No karma has been awarded yet.');
@@ -171,7 +171,7 @@ final class Router
 
         $lines = [];
         foreach ($top as $rank => $entry) {
-            $lines[] = ($rank + 1) . ". <@{$entry['userId']}> — {$entry['score']}";
+            $lines[] = ($rank + 1) . ". <@{$entry['userId']}> — {$entry['karma']}";
         }
 
         return $this->textResponse(implode("\n", $lines));
@@ -196,7 +196,7 @@ final class Router
 
         $lines = [];
         foreach ($events as $event) {
-            $lines[] = "<@{$event['fromUser']}> → <@{$event['toUser']}>: {$event['points']}";
+            $lines[] = "<@{$event['fromUser']}> → <@{$event['toUser']}>: {$event['karma']}";
         }
 
         return $this->textResponse(implode("\n", $lines));
@@ -216,7 +216,7 @@ final class Router
         $events = $this->storage->getEvents($userId, $since);
 
         $karmaReceived = array_sum(array_map(
-            static fn (array $event): int => $event['toUser'] === $userId ? $event['points'] : 0,
+            static fn (array $event): int => $event['toUser'] === $userId ? $event['karma'] : 0,
             $events
         ));
 

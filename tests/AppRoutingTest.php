@@ -44,7 +44,7 @@ final class AppRoutingTest extends TestCase
         $this->assertSame('abc123', $result);
     }
 
-    public function testKarmaMentionRecordsScoreReactsAndReplies(): void
+    public function testKarmaMentionRecordsKarmaReactsAndReplies(): void
     {
         // Slack user IDs are alphanumeric only (per Parser's regex) — no
         // underscores, unlike the U_FROM/U_TO style used for storage-level
@@ -69,7 +69,7 @@ final class AppRoutingTest extends TestCase
         ]);
 
         $this->assertNull($result);
-        $this->assertSame(['userId' => 'UTOUSER', 'score' => 2], $this->storage->getScore('UTOUSER'));
+        $this->assertSame(['userId' => 'UTOUSER', 'karma' => 2], $this->storage->getKarma('UTOUSER'));
     }
 
     public function testSelfMentionDoesNotAwardKarma(): void
@@ -93,7 +93,7 @@ final class AppRoutingTest extends TestCase
             ],
         ]);
 
-        $this->assertNull($this->storage->getScore('USELFUSER'));
+        $this->assertNull($this->storage->getKarma('USELFUSER'));
     }
 
     public function testSelfMentionInMixedMessageStillAwardsTheOtherUser(): void
@@ -122,8 +122,8 @@ final class AppRoutingTest extends TestCase
             ],
         ]);
 
-        $this->assertNull($this->storage->getScore('USELFUSER'));
-        $this->assertSame(['userId' => 'UOTHERUSR', 'score' => 2], $this->storage->getScore('UOTHERUSR'));
+        $this->assertNull($this->storage->getKarma('USELFUSER'));
+        $this->assertSame(['userId' => 'UOTHERUSR', 'karma' => 2], $this->storage->getKarma('UOTHERUSR'));
 
         $this->assertCount(2, $reactions);
         $this->assertContains('no_good', $reactions);
@@ -157,7 +157,7 @@ final class AppRoutingTest extends TestCase
             ],
         ]);
 
-        $this->assertSame(['userId' => 'UTOUSER', 'score' => 5], $this->storage->getScore('UTOUSER'));
+        $this->assertSame(['userId' => 'UTOUSER', 'karma' => 5], $this->storage->getKarma('UTOUSER'));
     }
 
     public function testMessageWithNoMentionDoesNothing(): void
@@ -176,7 +176,7 @@ final class AppRoutingTest extends TestCase
             ],
         ]);
 
-        $this->assertNull($this->storage->getScore('U_TO'));
+        $this->assertNull($this->storage->getKarma('U_TO'));
     }
 
     public function testBotMessageIsIgnoredEvenIfItLooksLikeAKarmaMention(): void
@@ -195,10 +195,10 @@ final class AppRoutingTest extends TestCase
             ],
         ]);
 
-        $this->assertNull($this->storage->getScore('UTOUSER'));
+        $this->assertNull($this->storage->getKarma('UTOUSER'));
     }
 
-    public function testSlashCommandOwnScore(): void
+    public function testSlashCommandOwnKarma(): void
     {
         $this->storage->recordEvent('U_OTHER', 'U_ME', 15, 'C1');
 
@@ -213,7 +213,7 @@ final class AppRoutingTest extends TestCase
         $this->assertStringContainsString('rank #1', $response['text']);
     }
 
-    public function testSlashCommandUserScore(): void
+    public function testSlashCommandUserKarma(): void
     {
         // extractMentionedUserId uses the same Slack-shaped ID regex as
         // Parser — alphanumeric only, hence UTOUSER rather than U_TO.
@@ -227,7 +227,7 @@ final class AppRoutingTest extends TestCase
         $this->assertStringContainsString('<@UTOUSER> has 5 karma', $response['text']);
     }
 
-    public function testSlashCommandUserScoreWithDisplayNameSuffix(): void
+    public function testSlashCommandUserKarmaWithDisplayNameSuffix(): void
     {
         // Slack renders a rich-text-composed mention as <@USERID|name> —
         // this must resolve the same as a plain <@USERID> mention.
@@ -307,7 +307,7 @@ final class AppRoutingTest extends TestCase
         $this->assertStringContainsString("don't recognize that user", $response['text']);
     }
 
-    public function testSlashCommandUserScoreWithUnresolvedTextShowsUnknownUserMessage(): void
+    public function testSlashCommandUserKarmaWithUnresolvedTextShowsUnknownUserMessage(): void
     {
         $response = $this->router->handleSlashCommand([
             'user_id' => 'UAUSER',

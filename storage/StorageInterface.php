@@ -7,39 +7,39 @@ declare(strict_types=1);
 namespace Shawware\Yakb\Storage;
 
 /**
- * Persists karma scores and the full karma event log.
+ * Persists karma totals and the full karma event log.
  *
- * Implementations store a running score per user (the `scores`
+ * Implementations store a running karma total per user (the `karma`
  * table/collection) and a full audit log of individual karma events (the
  * `events` table/collection) — see CLAUDE.md's "Data Model" section.
  *
  * Tier is deliberately not stored here. It is derived data — always
- * computed from a score via `Karma::tierForScore()`, never persisted —
- * so retuning `config/tiers.php` takes effect immediately for every user,
- * with no backfill and no risk of a stored tier drifting out of sync with
- * its score.
+ * computed from a karma total via `Karma::tierForKarma()`, never persisted
+ * — so retuning `config/tiers.php` takes effect immediately for every
+ * user, with no backfill and no risk of a stored tier drifting out of
+ * sync with its karma total.
  */
 interface StorageInterface
 {
     /**
-     * @return array{userId: string, score: int}|null
-     *         null if the user has no score on record yet.
+     * @return array{userId: string, karma: int}|null
+     *         null if the user has no karma on record yet.
      */
-    public function getScore(string $userId): ?array;
+    public function getKarma(string $userId): ?array;
 
     /**
-     * Records a karma event: `$fromUser` gave `$points` to `$toUser` in
-     * `$channel`. Applies the score change and returns the target user's
-     * new score.
+     * Records a karma event: `$fromUser` gave `$karma` to `$toUser` in
+     * `$channel`. Applies the karma change and returns the target user's
+     * new total.
      *
      * @param \DateTimeImmutable|null $occurredAt Defaults to now; accepted
      *        explicitly so callers (and tests) can control event ordering.
-     * @return array{userId: string, score: int}
+     * @return array{userId: string, karma: int}
      */
     public function recordEvent(
         string $fromUser,
         string $toUser,
-        int $points,
+        int $karma,
         string $channel,
         ?\DateTimeImmutable $occurredAt = null
     ): array;
@@ -52,7 +52,7 @@ interface StorageInterface
      *     id: int,
      *     fromUser: string,
      *     toUser: string,
-     *     points: int,
+     *     karma: int,
      *     channel: string,
      *     timestamp: \DateTimeImmutable
      * }>
@@ -60,17 +60,17 @@ interface StorageInterface
     public function getEvents(string $userId, \DateTimeImmutable $since): array;
 
     /**
-     * The top-scoring users, highest first.
+     * The highest-karma users, highest first.
      *
-     * @return array<int, array{userId: string, score: int}>
+     * @return array<int, array{userId: string, karma: int}>
      */
-    public function getTopScores(int $limit): array;
+    public function getTopKarma(int $limit): array;
 
     /**
-     * A user's leaderboard rank: 1 + the number of users with a strictly
-     * higher score. Users tied on score share the same rank.
+     * A user's leaderboard rank: 1 + the number of users with strictly
+     * more karma. Users tied on karma share the same rank.
      *
-     * @return int|null null if the user has no score on record yet.
+     * @return int|null null if the user has no karma on record yet.
      */
     public function getRank(string $userId): ?int;
 }

@@ -84,7 +84,7 @@ Invite the bot to each channel you want it to watch. Use `/invite @karmabot`.
 
 `src/Karma.php` calculates the tier from the cumulative score. Every bot reply shows the tier.
 
-Tier is derived data. It is never stored. Storage holds only the score. Every place that needs a tier calls `Karma::tierForScore($score)` at the moment it needs it. This keeps a stored tier from drifting out of sync with its score, and it means a change to `config/tiers.php` takes effect at once, for every user, with no backfill step.
+Tier is derived data. It is never stored. Storage holds only the karma total. Every place that needs a tier calls `Karma::tierForKarma($karma)` at the moment it needs it. This keeps a stored tier from drifting out of sync with its karma total, and it means a change to `config/tiers.php` takes effect at once, for every user, with no backfill step.
 
 To detect a tier change (Client 2 and Client 3 need this — see below), compute the tier from the score before the event and from the score after the event, then compare the two. Do this at the point where the event is handled (`yakb.php`), not inside storage. Storage only ever deals with scores.
 
@@ -127,25 +127,25 @@ Register slash commands in the Slack app dashboard. All commands POST to the sam
 | `/karma @user` | Another user's score and tier |
 | `/karma top` | The leaderboard, top N users |
 | `/karma history [@user]` | Recent karma events: who gave karma to whom |
-| `/karma month [@user]` | Karam earned in the past 30 days |
+| `/karma month [@user]` | Karma earned in the past 30 days |
 
 ### Data Model
 
 All three storage backends use the same two tables.
 
-**scores** — the current karma total for each user
+**karma** — the current karma total for each user
 - `user_id` (partition key / primary key)
-- `score`
+- `karma`
 
-Tier is derived from `score` at read time via `Karma::tierForScore()`. It is never stored — see "Karma Tiers" above.
+Tier is derived from `karma` at read time via `Karma::tierForKarma()`. It is never stored — see "Karma Tiers" above.
 
 All clients render mentions as `<@userId>` in every bot reply, letting Slack's own client resolve and display the real name — so no username is ever stored.
 
-**events** — the full audit log. This log supports history queries and score recalculation.
+**events** — the full audit log. This log supports history queries and karma recalculation.
 - `id`
 - `from_user`
 - `to_user`
-- `points`
+- `karma`
 - `channel`
 - `timestamp`
 
@@ -296,7 +296,7 @@ One deployment, with one handler process and one database, serves many Slack wor
 This approach uses fewer resources. It needs real new infrastructure:
 
 - An `installations` table. It maps `team_id` to an encrypted bot token. This table replaces the single `SLACK_BOT_TOKEN` env var. A Slack OAuth v2 install flow fills this table. A new route, `/slack/oauth/callback`, exchanges a one-time `code` for a bot token, through Slack's `oauth.v2.access` endpoint. This flow needs new `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET` credentials. Get these from the app's Basic Information page. Each app has one such pair. This differs from the per-workspace bot tokens.
-- A `team_id` field, used as a partition key. Add it to `scores` (the key becomes `(team_id, user_id)`) and as a column on `events`. Thread this field through every method in `storage/StorageInterface.php`: `getScore`, `recordEvent`, `getEvents`, and others. This makes isolation a structural property of the code, not a rule that each call site must remember. DynamoDB's `timestamp` index and Firestore's `(user_id, timestamp)` index must both include `team_id` too.
+- A `team_id` field, used as a partition key. Add it to `karma` (the key becomes `(team_id, user_id)`) and as a column on `events`. Thread this field through every method in `storage/StorageInterface.php`: `getKarma`, `recordEvent`, `getEvents`, and others. This makes isolation a structural property of the code, not a rule that each call site must remember. DynamoDB's `timestamp` index and Firestore's `(user_id, timestamp)` index must both include `team_id` too.
 - Revocation on uninstall. Slack sends an `app_uninstalled` event. When this event arrives, delete that workspace's row from `installations` at once.
 
 **Migrating from Option A to Option B later:** This is additive work, not a rewrite. First, backfill `team_id` on existing rows. This step is easy, because each single-tenant database already holds only one workspace's data, so every row gets the same known value. Next, merge the databases, if both deployments already use the same storage backend. Crossing backends, for example MySQL to DynamoDB, is the one genuinely hard case. Then add the OAuth route and the `installations` table. Then point both workspaces' Events API URLs at the one surviving deployment. Finally, run each workspace through the OAuth flow once, to store its own token.

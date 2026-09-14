@@ -7,7 +7,7 @@ declare(strict_types=1);
 namespace Shawware\Yakb;
 
 /**
- * Calculates a karma tier name from a cumulative score, using a
+ * Calculates a karma tier name from a cumulative karma total, using a
  * configurable, ordered list of tiers (see config/tiers.php).
  */
 final class Karma
@@ -17,7 +17,7 @@ final class Karma
 
     /**
      * @param array<int, array{name: string, min: int}> $tiers Ordered by
-     *        ascending `min`. Each entry has a `name` and a `min` score.
+     *        ascending `min`. Each entry has a `name` and a `min` karma total.
      */
     public function __construct(array $tiers)
     {
@@ -25,15 +25,15 @@ final class Karma
     }
 
     /**
-     * Returns the name of the highest tier whose `min` the score meets or
-     * exceeds, or null if the score is below every tier's `min`.
+     * Returns the name of the highest tier whose `min` the karma total
+     * meets or exceeds, or null if it's below every tier's `min`.
      */
-    public function tierForScore(int $score): ?string
+    public function tierForKarma(int $karma): ?string
     {
         $tierName = null;
 
         foreach ($this->tiers as $tier) {
-            if ($score >= $tier['min']) {
+            if ($karma >= $tier['min']) {
                 $tierName = $tier['name'];
             }
         }

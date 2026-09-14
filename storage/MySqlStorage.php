@@ -10,7 +10,7 @@ namespace Shawware\Yakb\Storage;
  * StorageInterface implementation backed by MySQL, via PDO.
  *
  * As with every StorageInterface implementation, tier is never stored or
- * computed here — this class deals only in scores and events.
+ * computed here — this class deals only in karma totals and events.
  */
 final class MySqlStorage implements StorageInterface
 {
@@ -18,9 +18,9 @@ final class MySqlStorage implements StorageInterface
     {
     }
 
-    public function getScore(string $userId): ?array
+    public function getKarma(string $userId): ?array
     {
-        $statement = $this->pdo->prepare('SELECT score FROM scores WHERE user_id = ?');
+        $statement = $this->pdo->prepare('SELECT karma FROM karma WHERE user_id = ?');
         $statement->execute([$userId]);
         $row = $statement->fetch(\PDO::FETCH_ASSOC);
 
@@ -28,13 +28,13 @@ final class MySqlStorage implements StorageInterface
             return null;
         }
 
-        return ['userId' => $userId, 'score' => (int) $row['score']];
+        return ['userId' => $userId, 'karma' => (int) $row['karma']];
     }
 
     public function recordEvent(
         string $fromUser,
         string $toUser,
-        int $points,
+        int $karma,
         string $channel,
         ?\DateTimeImmutable $occurredAt = null
     ): array {
@@ -44,16 +44,16 @@ final class MySqlStorage implements StorageInterface
 
         try {
             $insertEvent = $this->pdo->prepare(
-                'INSERT INTO events (from_user, to_user, points, channel, timestamp)
+                'INSERT INTO events (from_user, to_user, karma, channel, timestamp)
                  VALUES (?, ?, ?, ?, ?)'
             );
-            $insertEvent->execute([$fromUser, $toUser, $points, $channel, $timestamp]);
+            $insertEvent->execute([$fromUser, $toUser, $karma, $channel, $timestamp]);
 
-            $upsertScore = $this->pdo->prepare(
-                'INSERT INTO scores (user_id, score) VALUES (?, ?)
-                 ON DUPLICATE KEY UPDATE score = score + VALUES(score)'
+            $upsertKarma = $this->pdo->prepare(
+                'INSERT INTO karma (user_id, karma) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE karma = karma + VALUES(karma)'
             );
-            $upsertScore->execute([$toUser, $points]);
+            $upsertKarma->execute([$toUser, $karma]);
 
             $this->pdo->commit();
         } catch (\Throwable $e) {
@@ -61,13 +61,13 @@ final class MySqlStorage implements StorageInterface
             throw $e;
         }
 
-        return $this->getScore($toUser) ?? ['userId' => $toUser, 'score' => 0];
+        return $this->getKarma($toUser) ?? ['userId' => $toUser, 'karma' => 0];
     }
 
     public function getEvents(string $userId, \DateTimeImmutable $since): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, from_user, to_user, points, channel, timestamp
+            'SELECT id, from_user, to_user, karma, channel, timestamp
              FROM events
              WHERE (from_user = ? OR to_user = ?) AND timestamp >= ?
              ORDER BY timestamp DESC'
@@ -81,7 +81,7 @@ final class MySqlStorage implements StorageInterface
                 'id' => (int) $row['id'],
                 'fromUser' => $row['from_user'],
                 'toUser' => $row['to_user'],
-                'points' => (int) $row['points'],
+                'karma' => (int) $row['karma'],
                 'channel' => $row['channel'],
                 'timestamp' => new \DateTimeImmutable($row['timestamp']),
             ];
@@ -90,10 +90,10 @@ final class MySqlStorage implements StorageInterface
         return $events;
     }
 
-    public function getTopScores(int $limit): array
+    public function getTopKarma(int $limit): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT user_id, score FROM scores ORDER BY score DESC LIMIT ?'
+            'SELECT user_id, karma FROM karma ORDER BY karma DESC LIMIT ?'
         );
         $statement->bindValue(1, $limit, \PDO::PARAM_INT);
         $statement->execute();
@@ -101,7 +101,7 @@ final class MySqlStorage implements StorageInterface
         $top = [];
 
         foreach ($statement->fetchAll(\PDO::FETCH_ASSOC) as $row) {
-            $top[] = ['userId' => $row['user_id'], 'score' => (int) $row['score']];
+            $top[] = ['userId' => $row['user_id'], 'karma' => (int) $row['karma']];
         }
 
         return $top;
@@ -109,14 +109,14 @@ final class MySqlStorage implements StorageInterface
 
     public function getRank(string $userId): ?int
     {
-        $score = $this->getScore($userId);
+        $karma = $this->getKarma($userId);
 
-        if ($score === null) {
+        if ($karma === null) {
             return null;
         }
 
-        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM scores WHERE score > ?');
-        $statement->execute([$score['score']]);
+        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM karma WHERE karma > ?');
+        $statement->execute([$karma['karma']]);
 
         return ((int) $statement->fetchColumn()) + 1;
     }

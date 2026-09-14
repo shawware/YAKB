@@ -20,32 +20,32 @@ abstract class StorageContractTestCase extends TestCase
 {
     abstract protected function createStorage(): StorageInterface;
 
-    public function testGetScoreIsNullForAnUnknownUser(): void
+    public function testGetKarmaIsNullForAnUnknownUser(): void
     {
         $storage = $this->createStorage();
 
-        $this->assertNull($storage->getScore('U_UNKNOWN'));
+        $this->assertNull($storage->getKarma('U_UNKNOWN'));
     }
 
-    public function testRecordEventAccumulatesScoreForTheRecipient(): void
+    public function testRecordEventAccumulatesKarmaForTheRecipient(): void
     {
         $storage = $this->createStorage();
 
         $storage->recordEvent('U_FROM', 'U_TO', 2, 'C1');
         $result = $storage->recordEvent('U_FROM', 'U_TO', 3, 'C1');
 
-        $this->assertSame(['userId' => 'U_TO', 'score' => 5], $result);
+        $this->assertSame(['userId' => 'U_TO', 'karma' => 5], $result);
     }
 
-    public function testGetScoreReflectsRecordedEvents(): void
+    public function testGetKarmaReflectsRecordedEvents(): void
     {
         $storage = $this->createStorage();
 
         $storage->recordEvent('U_FROM', 'U_TO', 12, 'C1');
 
         $this->assertSame(
-            ['userId' => 'U_TO', 'score' => 12],
-            $storage->getScore('U_TO')
+            ['userId' => 'U_TO', 'karma' => 12],
+            $storage->getKarma('U_TO')
         );
     }
 
@@ -60,7 +60,7 @@ abstract class StorageContractTestCase extends TestCase
 
         // Before $since — must be excluded.
         $storage->recordEvent('U_A', 'U_B', 1, 'C1', $oldest);
-        // U_B gave points here — must still show up in U_B's history.
+        // U_B gave karma here — must still show up in U_B's history.
         $storage->recordEvent('U_B', 'U_A', 2, 'C1', $middle);
         $storage->recordEvent('U_A', 'U_B', 3, 'C1', $newest);
         // A different user pair entirely — must be excluded.
@@ -76,7 +76,7 @@ abstract class StorageContractTestCase extends TestCase
         $this->assertEquals($middle, $events[1]['timestamp']);
     }
 
-    public function testGetTopScoresOrdersDescendingAndRespectsLimit(): void
+    public function testGetTopKarmaOrdersDescendingAndRespectsLimit(): void
     {
         $storage = $this->createStorage();
 
@@ -84,12 +84,12 @@ abstract class StorageContractTestCase extends TestCase
         $storage->recordEvent('U_FROM', 'U_HIGH', 150, 'C1');
         $storage->recordEvent('U_FROM', 'U_MID', 10, 'C1');
 
-        $top = $storage->getTopScores(2);
+        $top = $storage->getTopKarma(2);
 
         $this->assertSame(
             [
-                ['userId' => 'U_HIGH', 'score' => 150],
-                ['userId' => 'U_MID', 'score' => 10],
+                ['userId' => 'U_HIGH', 'karma' => 150],
+                ['userId' => 'U_MID', 'karma' => 10],
             ],
             $top
         );
@@ -102,7 +102,7 @@ abstract class StorageContractTestCase extends TestCase
         $this->assertNull($storage->getRank('U_UNKNOWN'));
     }
 
-    public function testGetRankOrdersHighestScoreFirst(): void
+    public function testGetRankOrdersHighestKarmaFirst(): void
     {
         $storage = $this->createStorage();
 

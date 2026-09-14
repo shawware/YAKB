@@ -18,11 +18,11 @@ final class KarmaTest extends TestCase
     }
 
     #[DataProvider('defaultTierBoundaries')]
-    public function testDefaultTierBoundaries(int $score, ?string $expectedTier): void
+    public function testDefaultTierBoundaries(int $karmaTotal, ?string $expectedTier): void
     {
         $karma = new Karma($this->defaultTiers());
 
-        $this->assertSame($expectedTier, $karma->tierForScore($score));
+        $this->assertSame($expectedTier, $karma->tierForKarma($karmaTotal));
     }
 
     public static function defaultTierBoundaries(): array
@@ -47,10 +47,10 @@ final class KarmaTest extends TestCase
             ['name' => 'Veteran', 'min' => 100],
         ]);
 
-        $this->assertNull($karma->tierForScore(9));
-        $this->assertSame('Rookie', $karma->tierForScore(10));
-        $this->assertSame('Rookie', $karma->tierForScore(99));
-        $this->assertSame('Veteran', $karma->tierForScore(100));
+        $this->assertNull($karma->tierForKarma(9));
+        $this->assertSame('Rookie', $karma->tierForKarma(10));
+        $this->assertSame('Rookie', $karma->tierForKarma(99));
+        $this->assertSame('Veteran', $karma->tierForKarma(100));
     }
 
     public function testMoreThanFourTiers(): void
@@ -64,13 +64,13 @@ final class KarmaTest extends TestCase
             ['name' => 'Diamond',  'min' => 250],
         ]);
 
-        $this->assertNull($karma->tierForScore(0));
-        $this->assertSame('Tin', $karma->tierForScore(1));
-        $this->assertSame('Bronze', $karma->tierForScore(10));
-        $this->assertSame('Silver', $karma->tierForScore(25));
-        $this->assertSame('Gold', $karma->tierForScore(50));
-        $this->assertSame('Platinum', $karma->tierForScore(100));
-        $this->assertSame('Diamond', $karma->tierForScore(250));
-        $this->assertSame('Diamond', $karma->tierForScore(1_000_000));
+        $this->assertNull($karma->tierForKarma(0));
+        $this->assertSame('Tin', $karma->tierForKarma(1));
+        $this->assertSame('Bronze', $karma->tierForKarma(10));
+        $this->assertSame('Silver', $karma->tierForKarma(25));
+        $this->assertSame('Gold', $karma->tierForKarma(50));
+        $this->assertSame('Platinum', $karma->tierForKarma(100));
+        $this->assertSame('Diamond', $karma->tierForKarma(250));
+        $this->assertSame('Diamond', $karma->tierForKarma(1_000_000));
     }
 }

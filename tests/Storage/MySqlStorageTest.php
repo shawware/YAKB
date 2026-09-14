@@ -36,7 +36,7 @@ final class MySqlStorageTest extends StorageContractTestCase
 
     protected function setUp(): void
     {
-        self::$pdo->exec('TRUNCATE TABLE scores');
+        self::$pdo->exec('TRUNCATE TABLE karma');
         self::$pdo->exec('TRUNCATE TABLE events');
     }
 
