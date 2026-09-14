@@ -1,3 +1,5 @@
+-- Copyright © 2026 shawware.com.au
+
 CREATE TABLE events (
     id        INT AUTO_INCREMENT NOT NULL,
     from_user VARCHAR(32) NOT NULL,
