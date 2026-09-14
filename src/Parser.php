@@ -9,10 +9,13 @@ namespace Shawware\Yakb;
  *
  * Slack renders a user mention in event text as `<@U12345>`, not as a
  * literal `@user` — this is the format that must be matched against.
+ * Slack sometimes includes a display-name suffix, `<@U12345|somename>`
+ * (observed on mentions composed via the rich-text editor) — the pattern
+ * tolerates and ignores that suffix.
  */
 final class Parser
 {
-    private const PATTERN = '/<@([A-Z0-9]+)>\s*(\++)/';
+    private const PATTERN = '/<@([A-Z0-9]+)(?:\|[^>]*)?>\s*(\++)/';
 
     /**
      * Finds every karma mention in the given message text.

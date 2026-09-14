@@ -186,6 +186,20 @@ final class AppRoutingTest extends TestCase
         $this->assertStringContainsString('<@UTOUSER> has 5 points', $response['text']);
     }
 
+    public function testSlashCommandUserScoreWithDisplayNameSuffix(): void
+    {
+        // Slack renders a rich-text-composed mention as <@USERID|name> —
+        // this must resolve the same as a plain <@USERID> mention.
+        $this->storage->recordEvent('U_ME', 'UTOUSER', 5, 'C1');
+
+        $response = $this->router->handleSlashCommand([
+            'user_id' => 'U_ME',
+            'text' => '<@UTOUSER|david.shaw>',
+        ]);
+
+        $this->assertStringContainsString('<@UTOUSER> has 5 points', $response['text']);
+    }
+
     public function testSlashCommandTop(): void
     {
         $this->storage->recordEvent('U_FROM', 'U_LOW', 1, 'C1');

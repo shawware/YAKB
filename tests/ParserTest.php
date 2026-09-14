@@ -63,4 +63,13 @@ final class ParserTest extends TestCase
 
         $this->assertSame([['userId' => 'U999XYZ', 'points' => 2]], $mentions);
     }
+
+    public function testMentionWithDisplayNameSuffix(): void
+    {
+        // Slack renders a mention composed via the rich-text editor as
+        // <@USERID|displayname> — the "|displayname" part must be ignored.
+        $mentions = $this->parser->parse('<@U123ABC|david.shaw> ++');
+
+        $this->assertSame([['userId' => 'U123ABC', 'points' => 2]], $mentions);
+    }
 }

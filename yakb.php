@@ -196,7 +196,9 @@ final class Router
 
     private function extractMentionedUserId(string $text): ?string
     {
-        if (preg_match('/<@([A-Z0-9]+)>/', $text, $matches) === 1) {
+        // Slack sometimes includes a display-name suffix on a mention,
+        // <@U12345|somename> — tolerate and ignore it, same as Parser does.
+        if (preg_match('/<@([A-Z0-9]+)(?:\|[^>]*)?>/', $text, $matches) === 1) {
             return $matches[1];
         }
 
