@@ -140,6 +140,26 @@ final class AppRoutingTest extends TestCase
         ));
     }
 
+    public function testKarmaMentionExceedingCapIsCappedAndNotedInReply(): void
+    {
+        $this->slackApi->expects($this->once())
+            ->method('postMessage')
+            ->with('C1', $this->stringContains('(capped at 5 per message)'));
+
+        $this->router->handleEvent([
+            'type' => 'event_callback',
+            'event' => [
+                'type' => 'message',
+                'channel' => 'C1',
+                'user' => 'UFROMUSER',
+                'ts' => '1700000000.0003',
+                'text' => '<@UTOUSER> +++++++++', // 9 pluses, default cap 5
+            ],
+        ]);
+
+        $this->assertSame(['userId' => 'UTOUSER', 'score' => 5], $this->storage->getScore('UTOUSER'));
+    }
+
     public function testMessageWithNoMentionDoesNothing(): void
     {
         $this->slackApi->expects($this->never())->method('addReaction');

@@ -69,7 +69,8 @@ $pdo = new PDO(
 
 $storage = new MySqlStorage($pdo);
 $karma = new Karma(require $root . '/config/tiers.php');
-$router = new Router(new Parser(), $karma, $storage, $slackApi);
+$maxPointsPerMessage = (require $root . '/config/karma.php')['maxPointsPerMessage'];
+$router = new Router(new Parser($maxPointsPerMessage), $karma, $storage, $slackApi, $maxPointsPerMessage);
 
 if ($path === '/slack/events') {
     $payload = json_decode($rawBody, true);

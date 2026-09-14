@@ -26,7 +26,8 @@ final class Router
         private readonly Parser $parser,
         private readonly Karma $karma,
         private readonly StorageInterface $storage,
-        private readonly SlackApiInterface $slackApi
+        private readonly SlackApiInterface $slackApi,
+        private readonly int $maxPointsPerMessage = 5
     ) {
     }
 
@@ -67,7 +68,14 @@ final class Router
         $text = (string) ($event['text'] ?? '');
 
         foreach ($this->parser->parse($text) as $mention) {
-            $this->awardKarma($fromUser, $mention['userId'], $mention['points'], $channel, $messageTimestamp);
+            $this->awardKarma(
+                $fromUser,
+                $mention['userId'],
+                $mention['points'],
+                $channel,
+                $messageTimestamp,
+                $mention['capped']
+            );
         }
 
         return null;
@@ -78,7 +86,8 @@ final class Router
         string $toUser,
         int $points,
         string $channel,
-        string $messageTimestamp
+        string $messageTimestamp,
+        bool $capped = false
     ): void {
         if ($fromUser === $toUser) {
             $this->slackApi->addReaction($channel, $messageTimestamp, self::SELF_KARMA_EMOJI);
@@ -93,11 +102,13 @@ final class Router
         $result = $this->storage->recordEvent($fromUser, $toUser, $points, $channel);
         $tier = $this->karma->tierForScore($result['score']);
         $tierText = $tier !== null ? " ({$tier})" : '';
+        $cappedText = $capped ? " (capped at {$this->maxPointsPerMessage} per message)" : '';
 
         $this->slackApi->addReaction($channel, $messageTimestamp, self::REACTION_EMOJI);
         $this->slackApi->postMessage(
             $channel,
-            "<@{$toUser}> now has {$result['score']} point" . ($result['score'] === 1 ? '' : 's') . "{$tierText}!"
+            "<@{$toUser}> now has {$result['score']} point" . ($result['score'] === 1 ? '' : 's')
+                . "{$tierText}!{$cappedText}"
         );
     }
 
