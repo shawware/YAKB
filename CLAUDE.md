@@ -1,6 +1,6 @@
 # Yet Another KarmaBot
 
-YAKB is a Slack karma bot. It watches channels for `@user ++` patterns. It keeps a running score for each user.
+YAKB is a Slack karma bot. It watches channels for `@user ++` patterns. It keeps a running total for each user.
 
 One PHP codebase supports three different clients. Each client has its own thin entry point.
 
@@ -10,13 +10,13 @@ One PHP codebase supports three different clients. Each client has its own thin 
 
 - The bot watches Slack channels for messages that contain `@user` and one or more `+` signs.
 - The bot adds karma equal to the number of `+` signs, up to a configured maximum per message.
-- The bot saves scores and a full event log to a database.
-- The bot replies in the channel with the user's new score and tier.
+- The bot saves karma and a full event log to a database.
+- The bot replies in the channel with the user's new karma and tier.
 - The bot adds an emoji reaction to the message that triggered the event.
-- The bot assigns a karma tier (Bronze, Silver, Gold, or Platinum) based on the score.
+- The bot assigns a karma tier (Bronze, Silver, Gold, or Platinum) based on the user's karma.
 - The bot updates the user's Slack profile card with the current tier. This applies to Client 2 only.
 - The bot updates the user's Google Workspace Directory profile with the current tier. This applies to Client 3 only.
-- The bot answers slash commands for scores, history, and leaderboards.
+- The bot answers slash commands for karma, history, and leaderboards.
 
 ## Architecture
 
@@ -32,7 +32,7 @@ karmabot/
 │
 ├── src/
 │   ├── Parser.php               # regex, message parsing
-│   ├── Karma.php                # score logic, tier calculation, profile updates
+│   ├── Karma.php                # karma logic, tier calculation, profile updates
 │   ├── SlackApiInterface.php    # abstract interface — lets Router be tested with a mock
 │   └── SlackApi.php             # posting messages, reactions, profile writes
 │
@@ -66,7 +66,7 @@ Slack sends a URL verification challenge on first setup. Deploy the handler befo
 |---|---|
 | `channels:history` | Read messages in public channels |
 | `groups:history` | Read messages in private channels |
-| `chat:write` | Post score replies |
+| `chat:write` | Post karma replies |
 | `reactions:write` | Add the emoji reaction |
 | `users.profile:write` | Update the karma tier on the Slack profile card. Client 2 only. |
 | `commands` | Register slash commands |
@@ -82,17 +82,17 @@ Invite the bot to each channel you want it to watch. Use `/invite @karmabot`.
 
 ### Karma Tiers
 
-`src/Karma.php` calculates the tier from the cumulative score. Every bot reply shows the tier.
+`src/Karma.php` calculates the tier from the cumulative karma. Every bot reply shows the tier.
 
 Tier is derived data. It is never stored. Storage holds only the karma total. Every place that needs a tier calls `Karma::tierForKarma($karma)` at the moment it needs it. This keeps a stored tier from drifting out of sync with its karma total, and it means a change to `config/tiers.php` takes effect at once, for every user, with no backfill step.
 
-To detect a tier change (Client 2 and Client 3 need this — see below), compute the tier from the score before the event and from the score after the event, then compare the two. Do this at the point where the event is handled (`yakb.php`), not inside storage. Storage only ever deals with scores.
+To detect a tier change (Client 2 and Client 3 need this — see below), compute the tier from the karma before the event and from the karma after the event, then compare the two. Do this at the point where the event is handled (`yakb.php`), not inside storage. Storage only ever deals with karma.
 
 Client 2 also writes the tier to a custom Slack profile field. It does this each time the tier changes.
 
 Client 3 writes the tier to a Google Workspace Directory custom attribute. It does this each time the tier changes.
 
-Tiers and thresholds are configured, not hardcoded. `config/tiers.php` holds an ordered list of tiers, each with a `name` and a `min` score. `src/Karma.php` takes no built-in thresholds — it only knows how to walk whatever tier list it is given. An operator retunes tiers by editing `config/tiers.php`. No UI and no code change are needed.
+Tiers and thresholds are configured, not hardcoded. `config/tiers.php` holds an ordered list of tiers, each with a `name` and a `min` karma. `src/Karma.php` takes no built-in thresholds — it only knows how to walk whatever tier list it is given. An operator retunes tiers by editing `config/tiers.php`. No UI and no code change are needed.
 
 The shipped defaults, in `config/tiers.php`, are:
 
@@ -123,8 +123,8 @@ Register slash commands in the Slack app dashboard. All commands POST to the sam
 
 | Command | Description |
 |---|---|
-| `/karma` | Your own score, tier, and leaderboard rank |
-| `/karma @user` | Another user's score and tier |
+| `/karma` | Your own karma, tier, and leaderboard rank |
+| `/karma @user` | Another user's karma and tier |
 | `/karma top` | The leaderboard, top N users |
 | `/karma history [@user]` | Recent karma events: who gave karma to whom |
 | `/karma month [@user]` | Karma earned in the past 30 days |
@@ -162,11 +162,11 @@ Firestore needs a composite index on `(user_id, timestamp)`. Define this index i
 On a valid karma event, the bot does two things. It must do both within Slack's 3-second response window.
 
 1. The bot adds an emoji reaction to the original message.
-2. The bot posts a message in the channel with the updated score.
+2. The bot posts a message in the channel with the updated karma.
 
 The handler must return HTTP 200 to Slack quickly. All processing should finish within 3 seconds. If it does not, Slack will retry the request. At karma-bot scale, one synchronous handler easily fits this window. This handler does one storage write and two Slack API calls.
 
-**A user cannot give karma to themselves.** If the mentioned user is the same as the sender, the bot does not record an event or change any score. Instead it reacts with a different emoji (`no_good`) and replies that self-karma is not allowed. This check happens per mention. A message that mentions the sender and someone else still awards the other person normally.
+**A user cannot give karma to themselves.** If the mentioned user is the same as the sender, the bot does not record an event or change any karma. Instead it reacts with a different emoji (`no_good`) and replies that self-karma is not allowed. This check happens per mention. A message that mentions the sender and someone else still awards the other person normally.
 
 **The bot ignores its own messages.** The bot is a channel member, so its own replies are delivered back to it as ordinary message events. The handler skips any event with `subtype: bot_message` before parsing it, so it never reacts to its own output.
 
