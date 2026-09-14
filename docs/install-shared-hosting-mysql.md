@@ -22,7 +22,7 @@ Exact steps and panel navigation vary by host. This guide uses generic terms and
    - `chat:write`
    - `reactions:write`
    - `commands`
-5. **Slash Commands** → **Create New Command** → command `/karma`. Leave the Request URL blank for now — it needs a live domain first (step 8).
+5. **Slash Commands** → **Create New Command** → command `/karma`. Check **"Escape channels, users, and links sent to your app."** Leave the Request URL blank for now — it needs a live domain first (step 8).
 6. **Basic Information** → **App Credentials** → copy the **Signing Secret**. This becomes `SLACK_SIGNING_SECRET`.
 7. **OAuth & Permissions** → **Install to Workspace** → **Allow**. This needs workspace admin approval if you aren't the admin.
 8. After install, **OAuth & Permissions** shows a **Bot User OAuth Token** (`xoxb-...`). This becomes `SLACK_BOT_TOKEN`.
@@ -139,6 +139,10 @@ Click **Save Changes** at the bottom of the Event Subscriptions page — easy to
 ### The bot autocompletes/`@mention`s fine in a channel, but events still aren't arriving
 
 That only confirms the bot is a channel member — it says nothing about event delivery. Confirm delivery by checking your server's access log for an actual `POST /slack/events` or `POST /slack/commands` request at the time you tested.
+
+### `/karma @user` (or `history`/`month` with a `@user` argument) always falls back to the wrong user, or shows a usage error
+
+This happens even when you correctly select the person from Slack's autocomplete dropdown. A slash command's `text` field is a plain single-line input, not the rich-text message composer — unlike a normal `@mention ++` message (which always encodes as `<@USERID>`), a slash command's `text` only contains `<@USERID>` markup if **"Escape channels, users, and links sent to your app"** is checked for that command (**Slash Commands** → edit `/karma`). Without it, Slack sends the literal typed text (`@name`), which has no user ID in it at all to parse — check this setting before assuming it's a bug in the code.
 
 ### Strange `ModSecurity` warnings in the Apache error log about `/.git/` or `/.env`
 
