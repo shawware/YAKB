@@ -260,4 +260,40 @@ final class AppRoutingTest extends TestCase
 
         $this->assertStringContainsString('<@U_ME> earned 10 points', $response['text']);
     }
+
+    public function testSlashCommandHistoryWithUnresolvedUserDoesNotFallBackToRequester(): void
+    {
+        // "@use" is plain typed text, not a real mention — Slack only
+        // encodes <@USERID> when the argument is selected from its
+        // autocomplete. This must not silently show UAUSER's own history.
+        $this->storage->recordEvent('UOTHER', 'UAUSER', 3, 'C1');
+
+        $response = $this->router->handleSlashCommand([
+            'user_id' => 'UAUSER',
+            'text' => 'history @use',
+        ]);
+
+        $this->assertStringContainsString("don't recognize that user", $response['text']);
+        $this->assertStringNotContainsString('UAUSER', $response['text']);
+    }
+
+    public function testSlashCommandMonthWithUnresolvedUserDoesNotFallBackToRequester(): void
+    {
+        $response = $this->router->handleSlashCommand([
+            'user_id' => 'UAUSER',
+            'text' => 'month @use',
+        ]);
+
+        $this->assertStringContainsString("don't recognize that user", $response['text']);
+    }
+
+    public function testSlashCommandUserScoreWithUnresolvedTextShowsUnknownUserMessage(): void
+    {
+        $response = $this->router->handleSlashCommand([
+            'user_id' => 'UAUSER',
+            'text' => '@use',
+        ]);
+
+        $this->assertStringContainsString("don't recognize that user", $response['text']);
+    }
 }

@@ -140,7 +140,7 @@ final class Router
         $userId = $this->extractMentionedUserId($text);
 
         if ($userId === null) {
-            return $this->textResponse('Usage: /karma @user');
+            return $this->unknownUserResponse();
         }
 
         $score = $this->storage->getScore($userId)['score'] ?? 0;
@@ -170,7 +170,13 @@ final class Router
     /** @return array{response_type: string, text: string} */
     private function replyHistory(string $text, string $requestingUser): array
     {
-        $userId = $this->extractMentionedUserId($text) ?? $requestingUser;
+        $argument = trim(substr($text, strlen('history')));
+        $userId = $this->resolveOptionalUserArgument($argument, $requestingUser);
+
+        if ($userId === null) {
+            return $this->unknownUserResponse();
+        }
+
         $since = (new \DateTimeImmutable())->modify('-' . self::HISTORY_WINDOW_DAYS . ' days');
         $events = $this->storage->getEvents($userId, $since);
 
@@ -189,7 +195,13 @@ final class Router
     /** @return array{response_type: string, text: string} */
     private function replyMonth(string $text, string $requestingUser): array
     {
-        $userId = $this->extractMentionedUserId($text) ?? $requestingUser;
+        $argument = trim(substr($text, strlen('month')));
+        $userId = $this->resolveOptionalUserArgument($argument, $requestingUser);
+
+        if ($userId === null) {
+            return $this->unknownUserResponse();
+        }
+
         $since = (new \DateTimeImmutable())->modify('-' . self::MONTH_WINDOW_DAYS . ' days');
         $events = $this->storage->getEvents($userId, $since);
 
@@ -212,6 +224,30 @@ final class Router
         }
 
         return null;
+    }
+
+    /**
+     * Resolves the optional `@user` argument for `history`/`month`: an
+     * empty argument means "the requesting user." A non-empty argument
+     * that doesn't resolve to a real mention is a genuine error — it must
+     * not silently fall back to the requesting user, or it looks like
+     * data for the wrong person instead of an error.
+     */
+    private function resolveOptionalUserArgument(string $argument, string $requestingUser): ?string
+    {
+        if ($argument === '') {
+            return $requestingUser;
+        }
+
+        return $this->extractMentionedUserId($argument);
+    }
+
+    /** @return array{response_type: string, text: string} */
+    private function unknownUserResponse(): array
+    {
+        return $this->textResponse(
+            "I don't recognize that user. Type @ and pick them from Slack's suggestions, rather than typing the full name."
+        );
     }
 
     /** @return array{response_type: string, text: string} */
