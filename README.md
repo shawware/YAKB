@@ -9,7 +9,7 @@ One PHP codebase supports several clients. Each client runs on its own host, wit
 - The bot tracks karma from `@user ++` mentions in Slack channels. It adds an emoji reaction and replies in the channel with the new karma and tier.
 - A single message can award at most a configured maximum number of karma, regardless of how many `+` signs it contains.
 - A user cannot give karma to themselves. The bot reacts and replies to say so, instead.
-- Slash commands: `/karma`, `/karma @user`, `/karma top`, `/karma history [@user]`, `/karma month [@user]`
+- Slash commands: `/karma`, `/karma @user`, `/karma top`, `/karma history [@user]`, `/karma month [@user]`. Replies are private, visible only to the person who ran the command.
 - The bot shows a karma tier in its replies. Where the platform supports it, the bot also writes the tier to the user's Slack or Google Workspace profile.
 - Tiers and their karma thresholds are configurable. Edit `config/tiers.php` to change the tier names or thresholds, or to add or remove tiers. No UI and no code change are needed.
 - A pluggable storage layer (MySQL, DynamoDB, or Firestore) lets one codebase run across different hosting environments.

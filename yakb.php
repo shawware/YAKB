@@ -260,9 +260,16 @@ final class Router
         );
     }
 
-    /** @return array{response_type: string, text: string} */
+    /**
+     * All slash-command replies are ephemeral (visible only to the user
+     * who ran the command) — the only public karma activity is the
+     * award reaction/reply from an `@user ++` message, which goes
+     * through SlackApi::postMessage directly, not this method.
+     *
+     * @return array{response_type: string, text: string}
+     */
     private function textResponse(string $text): array
     {
-        return ['response_type' => 'in_channel', 'text' => $text];
+        return ['response_type' => 'ephemeral', 'text' => $text];
     }
 }

@@ -207,7 +207,7 @@ final class AppRoutingTest extends TestCase
             'text' => '',
         ]);
 
-        $this->assertSame('in_channel', $response['response_type']);
+        $this->assertSame('ephemeral', $response['response_type']);
         $this->assertStringContainsString('15 karma', $response['text']);
         $this->assertStringContainsString('tier Silver', $response['text']);
         $this->assertStringContainsString('rank #1', $response['text']);

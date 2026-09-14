@@ -121,6 +121,8 @@ An operator retunes the cap by editing `config/karma.php`. No UI and no code cha
 
 Register slash commands in the Slack app dashboard. All commands POST to the same routing in `yakb.php`. The router dispatches each command by its path.
 
+Every `/karma` reply is ephemeral — visible only to the user who ran the command, not the rest of the channel. This is the only place karma activity is private; the `@user ++` award reaction and reply (from an ordinary message, not a slash command) stay public.
+
 | Command | Description |
 |---|---|
 | `/karma` | Your own karma, tier, and leaderboard rank |
