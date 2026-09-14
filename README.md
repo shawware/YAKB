@@ -7,6 +7,7 @@ One PHP codebase supports several clients. Each client runs on its own host, wit
 ## Features
 
 - The bot tracks karma from `@user ++` mentions in Slack channels. It adds an emoji reaction and replies in the channel with the new score and tier.
+- A user cannot give karma to themselves. The bot reacts and replies to say so, instead.
 - Slash commands: `/karma`, `/karma @user`, `/karma top`, `/karma history [@user]`, `/karma month [@user]`
 - The bot shows a karma tier in its replies. Where the platform supports it, the bot also writes the tier to the user's Slack or Google Workspace profile.
 - Tiers and their score thresholds are configurable. Edit `config/tiers.php` to change the tier names or thresholds, or to add or remove tiers. No UI and no code change are needed.
@@ -14,13 +15,13 @@ One PHP codebase supports several clients. Each client runs on its own host, wit
 
 ## Status
 
-The architecture and design are set. Client 1 (DreamHost shared hosting) is under active development.
+Client 1 (shared hosting, MySQL) is built, tested, and running live against a real Slack workspace.
 
-Built so far, with tests:
-- Configurable karma tier calculation (`src/Karma.php`, `config/tiers.php`)
-- The `@user ++` message parser (`src/Parser.php`)
+Client 2 (AWS Lambda, DynamoDB) and Client 3 (Cloud Run, Firestore) are designed but not yet built.
 
-See [CLAUDE.md](CLAUDE.md) for the full architecture, the data model, and the per-client deployment details.
+To install YAKB on shared hosting with MySQL, see [docs/install-shared-hosting-mysql.md](docs/install-shared-hosting-mysql.md).
+
+See [CLAUDE.md](CLAUDE.md) for the full architecture, the data model, and the per-client design details.
 
 ## License
 

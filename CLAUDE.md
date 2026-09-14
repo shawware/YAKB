@@ -4,7 +4,7 @@ YAKB is a Slack karma bot. It watches channels for `@user ++` patterns. It keeps
 
 One PHP codebase supports three different clients. Each client has its own thin entry point.
 
-**Build for Client 1 first.** Client 1 uses DreamHost shared hosting. Prove the core logic on Client 1. Add Client 2 and Client 3 after that.
+**Build for Client 1 first.** Client 1 uses shared hosting. Prove the core logic on Client 1. Add Client 2 and Client 3 after that.
 
 ## What The Bot Does
 
@@ -68,7 +68,6 @@ Slack sends a URL verification challenge on first setup. Deploy the handler befo
 | `groups:history` | Read messages in private channels |
 | `chat:write` | Post score replies |
 | `reactions:write` | Add the emoji reaction |
-| `users:read` | Resolve a user ID to a display name |
 | `users.profile:write` | Update the karma tier on the Slack profile card. Client 2 only. |
 | `commands` | Register slash commands |
 
@@ -128,9 +127,9 @@ All three storage backends use the same two tables.
 - `user_id` (partition key / primary key)
 - `score`
 
-There is no `tier` column. Tier is derived from `score` at read time via `Karma::tierForScore()`. It is never stored — see "Karma Tiers" above.
+Tier is derived from `score` at read time via `Karma::tierForScore()`. It is never stored — see "Karma Tiers" above.
 
-There is no `username` column either. All clients render mentions as `<@userId>` in every bot reply, letting Slack's own client resolve and display the real name — so no username is ever stored. `users:read` is still a required OAuth scope (see "Slack Integration" above), but nothing currently calls it. Storing a resolved username here would mean storing personal data (PII) with no offsetting need, so it was dropped rather than populated.
+All clients render mentions as `<@userId>` in every bot reply, letting Slack's own client resolve and display the real name — so no username is ever stored.
 
 **events** — the full audit log. This log supports history queries and score recalculation.
 - `id`
@@ -163,7 +162,7 @@ The handler must return HTTP 200 to Slack quickly. All processing should finish 
 
 The bot has no human-facing UI. It only answers Slack. A person may still land on the bare domain by accident, or a scanner may probe it.
 
-Serve a simple static page for the root path and for any unmatched path. Do not redirect. DreamHost shared hosting does not support a clean same-URL redirect for this case.
+Serve a simple static page for the root path and for any unmatched path. Do not redirect. Many shared hosting control panels do not support a clean same-URL redirect for this case.
 
 The static page must not leak any information. Do not show a stack trace. Do not show a framework error page. Do not show which storage backend or which Slack workspace this instance serves.
 
@@ -173,21 +172,19 @@ Every real route (`/slack/events`, `/slack/commands`) must still check the Slack
 
 ## Client 1 (first deploy)
 
-**Profile:** Slack free tier. Google Workspace, paid. DreamHost shared hosting with MySQL.
+**Profile:** Slack free tier. Google Workspace, paid. Shared hosting with MySQL.
 
-**Runtime:** Native PHP, through Apache `mod_php` (or `php-fpm`, if the plan supports it). DreamHost does not support Phusion Passenger. See DreamHost's own [supported technologies](https://help.dreamhost.com/hc/en-us/articles/217141627-Supported-and-unsupported-technologies) page. No adapter is needed, because PHP is DreamHost's native supported language.
+**Runtime:** Native PHP, through Apache `mod_php` (or `php-fpm`, if the plan supports it). Many shared hosts do not support Phusion Passenger — check your host's own list of supported technologies before assuming it's available. No adapter is needed if the host runs PHP natively, which is true of nearly every shared host.
 
 **Entry point:** `public/index.php`. Point the domain's document root at `public/`. `index.php` is the only web-exposed file. It routes each request into `yakb.php` and `src/`.
 
-**Storage:** MySQL on shared hosting, through PDO (`pdo_mysql`). This costs nothing extra. DreamHost already provides it.
+**Storage:** MySQL on shared hosting, through PDO (`pdo_mysql`). This costs nothing extra — nearly all shared hosting plans already include MySQL.
 
-**Deployment:** SFTP or git, the same as your other DreamHost PHP apps. Install dependencies with Composer (`composer install`). Composer writes them to `vendor/`, outside `public/`.
+**Deployment:** SFTP or git, the same as your other PHP apps on this host. Install dependencies with Composer (`composer install`). Composer writes them to `vendor/`, outside `public/`.
 
-**Key constraints:**
-- Confirm that the host allows inbound webhooks from external IPs. Do this before you configure the Events API.
-- Slack's free tier does not support custom profile fields. So karma tiers appear in bot replies only, not on the profile card.
-- Keep `.env` next to `composer.json`, at the project root, outside `public/`. Load it with `vlucas/phpdotenv`.
-- DreamHost disables the `putenv()` function. `vlucas/phpdotenv` needs `putenv()` to make a loaded value visible to `getenv()`. Without it, `.env` still loads correctly into `$_ENV` and `$_SERVER`, but `getenv()` silently returns `false` for every value. Read config through `envValue()` in `env.php`, not through `getenv()` directly — it checks `$_ENV` and `$_SERVER` first.
+Slack's free tier does not support custom profile fields. So karma tiers appear in bot replies only, not on the profile card.
+
+**For the full step-by-step install — domain setup, `.env`, MySQL, the Slack app, and known pitfalls — see [docs/install-shared-hosting-mysql.md](docs/install-shared-hosting-mysql.md).**
 
 ---
 
@@ -246,16 +243,7 @@ Every real route (`/slack/events`, `/slack/commands`) must still check the Slack
 9. Client 3 only: ask a GWS admin to define the "Karma Tier" custom user attribute in the Directory schema. Grant the GCP service account domain-wide delegation.
 10. Invite the bot to each channel: `/invite @karmabot`.
 
-### Pitfalls From a Real Install
-
-These tripped up the first real install. Check them if slash commands or events stop arriving, even after the checklist above looks complete.
-
-- **Turn off Socket Mode.** Find "Socket Mode" in the app's sidebar and confirm it is off. If it is on, Slack delivers slash commands and events over a persistent WebSocket connection instead of to your Request URL. This project needs HTTP webhooks — see "Slack Integration" above for why. A symptom of Socket Mode being on: a slash command fails with "the app did not respond," and your server's access log shows no request for it at all. Socket Mode can be toggled on after your Events API URL already verified once, so a working install can silently break later if someone (or you) turns it on.
-- **"Incoming Webhooks" is a different feature. Do not use it.** It generates a URL for posting messages *into* Slack from an external system — the opposite direction of what this bot needs. The bot already posts messages using the bot token, through `chat.postMessage`. The feature this project needs is **Event Subscriptions**, a separate sidebar item.
-- **The bot token does not exist until after you install the app.** It is not on the "Basic Information" page. Find it on **OAuth & Permissions**, under "Bot User OAuth Token," only after you click **Install to Workspace** (or **Install App**) and approve it.
-- **"Client Secret" and "Verification Token," both on Basic Information, are not needed for this project.** Client Secret only matters for a full OAuth install flow (see "Deployment Model" above, Option B) — this project does not use one. Verification Token is an old, deprecated credential; Slack's current guidance is to use the Signing Secret instead, which this project already does.
-- **After you add a bot event subscription, click "Save Changes."** This is easy to miss — the field can look filled in without the change actually taking effect. Slack usually also asks you to reinstall the app after this kind of change; do that too.
-- **Being able to `@mention` the bot in a channel does not confirm events are being delivered.** It only confirms the bot is a channel member. Confirm delivery by checking your server's access log for the actual `POST /slack/events` or `POST /slack/commands` request.
+A real install turned up several non-obvious pitfalls (Socket Mode silently breaking delivery, "Incoming Webhooks" vs. "Event Subscriptions" confusion, where the bot token actually appears, and more). See the Troubleshooting section of [docs/install-shared-hosting-mysql.md](docs/install-shared-hosting-mysql.md) for all of them.
 
 ---
 
