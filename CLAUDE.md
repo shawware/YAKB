@@ -9,7 +9,7 @@ One PHP codebase supports three different clients. Each client has its own thin 
 ## What The Bot Does
 
 - The bot watches Slack channels for messages that contain `@user` and one or more `+` signs.
-- The bot adds points equal to the number of `+` signs, up to a configured maximum per message.
+- The bot adds karma equal to the number of `+` signs, up to a configured maximum per message.
 - The bot saves scores and a full event log to a database.
 - The bot replies in the channel with the user's new score and tier.
 - The bot adds an emoji reaction to the message that triggered the event.
@@ -109,11 +109,11 @@ Client 3 needs a GWS admin to create a custom user attribute first, for example 
 
 ### Karma Cap
 
-`src/Parser.php` caps the points from a single message at `config/karma.php`'s `maxPointsPerMessage` (shipped default: 5). This limits how much karma one message can award, for example `<@user> ++++++++++++++++++`. The cap applies per mention, not per message — a message that mentions two different users can still award each of them up to the maximum.
+`src/Parser.php` caps the karma from a single message at `config/karma.php`'s `maxKarmaPerMessage` (shipped default: 5). This limits how much karma one message can award, for example `<@user> ++++++++++++++++++`. The cap applies per mention, not per message — a message that mentions two different users can still award each of them up to the maximum.
 
 The parser reports whether it applied the cap (`capped: true`). When it did, the bot's reply names the cap, so the sender knows their `+` count was reduced rather than silently ignored:
 
-> `<@user> now has 7 points (Bronze)! (capped at 5 per message)`
+> `<@user> now has 7 karma (Bronze)! (capped at 5 karma per message)`
 
 An operator retunes the cap by editing `config/karma.php`. No UI and no code change are needed.
 
@@ -126,8 +126,8 @@ Register slash commands in the Slack app dashboard. All commands POST to the sam
 | `/karma` | Your own score, tier, and leaderboard rank |
 | `/karma @user` | Another user's score and tier |
 | `/karma top` | The leaderboard, top N users |
-| `/karma history [@user]` | Recent karma events: who gave points to whom |
-| `/karma month [@user]` | Points earned in the past 30 days |
+| `/karma history [@user]` | Recent karma events: who gave karma to whom |
+| `/karma month [@user]` | Karam earned in the past 30 days |
 
 ### Data Model
 

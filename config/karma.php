@@ -5,5 +5,5 @@
 declare(strict_types=1);
 
 return [
-    'maxPointsPerMessage' => 5,
+    'maxKarmaPerMessage' => 5,
 ];

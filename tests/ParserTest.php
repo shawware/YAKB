@@ -22,14 +22,14 @@ final class ParserTest extends TestCase
     {
         $mentions = $this->parser->parse('<@U123ABC> ++');
 
-        $this->assertSame([['userId' => 'U123ABC', 'points' => 2, 'capped' => false]], $mentions);
+        $this->assertSame([['userId' => 'U123ABC', 'karma' => 2, 'capped' => false]], $mentions);
     }
 
     public function testMentionWithNoSpaceBeforePlusses(): void
     {
         $mentions = $this->parser->parse('<@U123ABC>+++');
 
-        $this->assertSame([['userId' => 'U123ABC', 'points' => 3, 'capped' => false]], $mentions);
+        $this->assertSame([['userId' => 'U123ABC', 'karma' => 3, 'capped' => false]], $mentions);
     }
 
     public function testMultipleMentionsInOneMessage(): void
@@ -38,8 +38,8 @@ final class ParserTest extends TestCase
 
         $this->assertSame(
             [
-                ['userId' => 'U111', 'points' => 2, 'capped' => false],
-                ['userId' => 'U222', 'points' => 5, 'capped' => false],
+                ['userId' => 'U111', 'karma' => 2, 'capped' => false],
+                ['userId' => 'U222', 'karma' => 5, 'capped' => false],
             ],
             $mentions
         );
@@ -63,7 +63,7 @@ final class ParserTest extends TestCase
     {
         $mentions = $this->parser->parse('great job on the release <@U999XYZ> ++ really appreciate it!');
 
-        $this->assertSame([['userId' => 'U999XYZ', 'points' => 2, 'capped' => false]], $mentions);
+        $this->assertSame([['userId' => 'U999XYZ', 'karma' => 2, 'capped' => false]], $mentions);
     }
 
     public function testMentionWithDisplayNameSuffix(): void
@@ -72,29 +72,29 @@ final class ParserTest extends TestCase
         // <@USERID|displayname> — the "|displayname" part must be ignored.
         $mentions = $this->parser->parse('<@U123ABC|david.shaw> ++');
 
-        $this->assertSame([['userId' => 'U123ABC', 'points' => 2, 'capped' => false]], $mentions);
+        $this->assertSame([['userId' => 'U123ABC', 'karma' => 2, 'capped' => false]], $mentions);
     }
 
-    public function testPointsBeyondTheDefaultMaxAreCapped(): void
+    public function testKarmaBeyondTheDefaultMaxAreCapped(): void
     {
         $mentions = $this->parser->parse('<@U123ABC> +++++++++'); // 9 pluses, default max 5
 
-        $this->assertSame([['userId' => 'U123ABC', 'points' => 5, 'capped' => true]], $mentions);
+        $this->assertSame([['userId' => 'U123ABC', 'karma' => 5, 'capped' => true]], $mentions);
     }
 
-    public function testPointsExactlyAtTheMaxAreNotFlaggedAsCapped(): void
+    public function testKarmaExactlyAtTheMaxAreNotFlaggedAsCapped(): void
     {
         $mentions = $this->parser->parse('<@U123ABC> +++++'); // exactly the default max, 5
 
-        $this->assertSame([['userId' => 'U123ABC', 'points' => 5, 'capped' => false]], $mentions);
+        $this->assertSame([['userId' => 'U123ABC', 'karma' => 5, 'capped' => false]], $mentions);
     }
 
-    public function testCustomMaxPointsPerMessage(): void
+    public function testCustomMaxKarmaPerMessage(): void
     {
-        $parser = new Parser(maxPointsPerMessage: 2);
+        $parser = new Parser(maxKarmaPerMessage: 2);
 
         $mentions = $parser->parse('<@U123ABC> ++++');
 
-        $this->assertSame([['userId' => 'U123ABC', 'points' => 2, 'capped' => true]], $mentions);
+        $this->assertSame([['userId' => 'U123ABC', 'karma' => 2, 'capped' => true]], $mentions);
     }
 }

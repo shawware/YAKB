@@ -7,7 +7,7 @@ One PHP codebase supports several clients. Each client runs on its own host, wit
 ## Features
 
 - The bot tracks karma from `@user ++` mentions in Slack channels. It adds an emoji reaction and replies in the channel with the new score and tier.
-- A single message can award at most a configured maximum number of points, regardless of how many `+` signs it contains.
+- A single message can award at most a configured maximum number of karma, regardless of how many `+` signs it contains.
 - A user cannot give karma to themselves. The bot reacts and replies to say so, instead.
 - Slash commands: `/karma`, `/karma @user`, `/karma top`, `/karma history [@user]`, `/karma month [@user]`
 - The bot shows a karma tier in its replies. Where the platform supports it, the bot also writes the tier to the user's Slack or Google Workspace profile.
@@ -21,9 +21,9 @@ Two files under `config/` let an operator retune an instance without a code chan
 | File | Controls | Default |
 |---|---|---|
 | `config/tiers.php` | An ordered list of tiers, each with a `name` and a `min` score | Bronze (1), Silver (50), Gold (200), Platinum (500) |
-| `config/karma.php` | The maximum points a single message can award (`maxPointsPerMessage`) | 5 |
+| `config/karma.php` | The maximum karma a single message can award (`maxKarmaPerMessage`) | 5 |
 
-A message that exceeds the cap still awards karma, just capped at the maximum, and the bot's reply says so: `<@user> now has 7 points (Bronze)! (capped at 5 per message)`.
+A message that exceeds the cap still awards karma, just capped at the maximum, and the bot's reply says so: `<@user> now has 7 karma (Bronze)! (capped at 5 karma per message)`.
 
 ## Status
 

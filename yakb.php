@@ -27,7 +27,7 @@ final class Router
         private readonly Karma $karma,
         private readonly StorageInterface $storage,
         private readonly SlackApiInterface $slackApi,
-        private readonly int $maxPointsPerMessage = 5
+        private readonly int $maxKarmaPerMessage = 5
     ) {
     }
 
@@ -71,7 +71,7 @@ final class Router
             $this->awardKarma(
                 $fromUser,
                 $mention['userId'],
-                $mention['points'],
+                $mention['karma'],
                 $channel,
                 $messageTimestamp,
                 $mention['capped']
@@ -84,7 +84,7 @@ final class Router
     private function awardKarma(
         string $fromUser,
         string $toUser,
-        int $points,
+        int $karma,
         string $channel,
         string $messageTimestamp,
         bool $capped = false
@@ -99,16 +99,15 @@ final class Router
             return;
         }
 
-        $result = $this->storage->recordEvent($fromUser, $toUser, $points, $channel);
+        $result = $this->storage->recordEvent($fromUser, $toUser, $karma, $channel);
         $tier = $this->karma->tierForScore($result['score']);
         $tierText = $tier !== null ? " ({$tier})" : '';
-        $cappedText = $capped ? " (capped at {$this->maxPointsPerMessage} per message)" : '';
+        $cappedText = $capped ? " (capped at {$this->maxKarmaPerMessage} karma per message)" : '';
 
         $this->slackApi->addReaction($channel, $messageTimestamp, self::REACTION_EMOJI);
         $this->slackApi->postMessage(
             $channel,
-            "<@{$toUser}> now has {$result['score']} point" . ($result['score'] === 1 ? '' : 's')
-                . "{$tierText}!{$cappedText}"
+            "<@{$toUser}> now has {$result['score']} karma{$tierText}!{$cappedText}"
         );
     }
 
@@ -142,7 +141,7 @@ final class Router
         $tierText = $tier !== null ? ", tier {$tier}" : '';
         $rankText = $rank !== null ? ", rank #{$rank}" : '';
 
-        return $this->textResponse("You have {$score} points{$tierText}{$rankText}.");
+        return $this->textResponse("You have {$score} karma{$tierText}{$rankText}.");
     }
 
     /** @return array{response_type: string, text: string} */
@@ -158,7 +157,7 @@ final class Router
         $tier = $this->karma->tierForScore($score);
         $tierText = $tier !== null ? ", tier {$tier}" : '';
 
-        return $this->textResponse("<@{$userId}> has {$score} points{$tierText}.");
+        return $this->textResponse("<@{$userId}> has {$score} karma{$tierText}.");
     }
 
     /** @return array{response_type: string, text: string} */
@@ -216,13 +215,13 @@ final class Router
         $since = (new \DateTimeImmutable())->modify('-' . self::MONTH_WINDOW_DAYS . ' days');
         $events = $this->storage->getEvents($userId, $since);
 
-        $pointsReceived = array_sum(array_map(
+        $karmaReceived = array_sum(array_map(
             static fn (array $event): int => $event['toUser'] === $userId ? $event['points'] : 0,
             $events
         ));
 
         return $this->textResponse(
-            "<@{$userId}> earned {$pointsReceived} points in the last " . self::MONTH_WINDOW_DAYS . ' days.'
+            "<@{$userId}> earned {$karmaReceived} karma in the last " . self::MONTH_WINDOW_DAYS . ' days.'
         );
     }
 

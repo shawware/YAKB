@@ -19,7 +19,7 @@ final class Parser
 {
     private const PATTERN = '/<@([A-Z0-9]+)(?:\|[^>]*)?>\s*(\++)/';
 
-    public function __construct(private readonly int $maxPointsPerMessage = 5)
+    public function __construct(private readonly int $maxKarmaPerMessage = 5)
     {
     }
 
@@ -28,11 +28,11 @@ final class Parser
      *
      * A "karma mention" is a user mention immediately followed by one or
      * more `+` characters. A mention with no `+` is not a karma event and
-     * is not returned. Points are capped at `maxPointsPerMessage`; `capped`
+     * is not returned. Karma is capped at `maxKarmaPerMessage`; `capped`
      * tells the caller whether that cap was actually applied, so it can
      * tell the sender apart from an ordinary award.
      *
-     * @return array<int, array{userId: string, points: int, capped: bool}>
+     * @return array<int, array{userId: string, karma: int, capped: bool}>
      */
     public function parse(string $text): array
     {
@@ -43,12 +43,12 @@ final class Parser
         $mentions = [];
 
         foreach ($matches as $match) {
-            $rawPoints = strlen($match[2]);
+            $rawKarma = strlen($match[2]);
 
             $mentions[] = [
                 'userId' => $match[1],
-                'points' => min($rawPoints, $this->maxPointsPerMessage),
-                'capped' => $rawPoints > $this->maxPointsPerMessage,
+                'karma' => min($rawKarma, $this->maxKarmaPerMessage),
+                'capped' => $rawKarma > $this->maxKarmaPerMessage,
             ];
         }
 

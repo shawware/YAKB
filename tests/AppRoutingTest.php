@@ -55,7 +55,7 @@ final class AppRoutingTest extends TestCase
 
         $this->slackApi->expects($this->once())
             ->method('postMessage')
-            ->with('C1', $this->stringContains('<@UTOUSER> now has 2 points'));
+            ->with('C1', $this->stringContains('<@UTOUSER> now has 2 karma'));
 
         $result = $this->router->handleEvent([
             'type' => 'event_callback',
@@ -136,7 +136,7 @@ final class AppRoutingTest extends TestCase
         ));
         $this->assertNotEmpty(array_filter(
             $messages,
-            static fn (string $m): bool => str_contains($m, '<@UOTHERUSR> now has 2 points')
+            static fn (string $m): bool => str_contains($m, '<@UOTHERUSR> now has 2 karma')
         ));
     }
 
@@ -144,7 +144,7 @@ final class AppRoutingTest extends TestCase
     {
         $this->slackApi->expects($this->once())
             ->method('postMessage')
-            ->with('C1', $this->stringContains('(capped at 5 per message)'));
+            ->with('C1', $this->stringContains('(capped at 5 karma per message)'));
 
         $this->router->handleEvent([
             'type' => 'event_callback',
@@ -208,7 +208,7 @@ final class AppRoutingTest extends TestCase
         ]);
 
         $this->assertSame('in_channel', $response['response_type']);
-        $this->assertStringContainsString('15 points', $response['text']);
+        $this->assertStringContainsString('15 karma', $response['text']);
         $this->assertStringContainsString('tier Silver', $response['text']);
         $this->assertStringContainsString('rank #1', $response['text']);
     }
@@ -224,7 +224,7 @@ final class AppRoutingTest extends TestCase
             'text' => '<@UTOUSER>',
         ]);
 
-        $this->assertStringContainsString('<@UTOUSER> has 5 points', $response['text']);
+        $this->assertStringContainsString('<@UTOUSER> has 5 karma', $response['text']);
     }
 
     public function testSlashCommandUserScoreWithDisplayNameSuffix(): void
@@ -238,7 +238,7 @@ final class AppRoutingTest extends TestCase
             'text' => '<@UTOUSER|david.shaw>',
         ]);
 
-        $this->assertStringContainsString('<@UTOUSER> has 5 points', $response['text']);
+        $this->assertStringContainsString('<@UTOUSER> has 5 karma', $response['text']);
     }
 
     public function testSlashCommandTop(): void
@@ -267,7 +267,7 @@ final class AppRoutingTest extends TestCase
         $this->assertStringContainsString('<@UAUSER> → <@UBUSER>: 3', $response['text']);
     }
 
-    public function testSlashCommandMonthSumsPointsReceived(): void
+    public function testSlashCommandMonthSumsKarmaReceived(): void
     {
         $this->storage->recordEvent('U_A', 'U_ME', 4, 'C1');
         $this->storage->recordEvent('U_B', 'U_ME', 6, 'C1');
@@ -278,7 +278,7 @@ final class AppRoutingTest extends TestCase
             'text' => 'month',
         ]);
 
-        $this->assertStringContainsString('<@U_ME> earned 10 points', $response['text']);
+        $this->assertStringContainsString('<@U_ME> earned 10 karma', $response['text']);
     }
 
     public function testSlashCommandHistoryWithUnresolvedUserDoesNotFallBackToRequester(): void
