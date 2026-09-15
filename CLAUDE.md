@@ -164,7 +164,7 @@ Firestore needs a composite index on `(user_id, timestamp)`. Define this index i
 On a valid karma event, the bot does two things. It must do both within Slack's 3-second response window.
 
 1. The bot adds an emoji reaction to the original message.
-2. The bot posts a message in the channel with the updated karma.
+2. The bot posts a message in the channel, threaded as a reply to the original message, with the updated karma.
 
 The handler must return HTTP 200 to Slack quickly. All processing should finish within 3 seconds. If it does not, Slack will retry the request. At karma-bot scale, one synchronous handler easily fits this window. This handler does one storage write and two Slack API calls.
 

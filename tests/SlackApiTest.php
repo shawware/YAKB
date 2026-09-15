@@ -84,6 +84,25 @@ final class SlackApiTest extends TestCase
         );
     }
 
+    public function testPostMessageIncludesThreadTsWhenGiven(): void
+    {
+        $history = [];
+        $slackApi = $this->makeSlackApiWithMockedHttp(
+            new Response(200, [], json_encode(['ok' => true])),
+            $history
+        );
+
+        $slackApi->postMessage('C123', 'nice work!', '1699999999.000100');
+
+        $this->assertCount(1, $history);
+        $request = $history[0]['request'];
+
+        $this->assertSame(
+            ['channel' => 'C123', 'text' => 'nice work!', 'thread_ts' => '1699999999.000100'],
+            json_decode((string) $request->getBody(), true)
+        );
+    }
+
     public function testAddReactionCallsReactionsAddWithTheRightPayload(): void
     {
         $history = [];

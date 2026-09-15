@@ -93,7 +93,8 @@ final class Router
             $this->slackApi->addReaction($channel, $messageTimestamp, self::SELF_KARMA_EMOJI);
             $this->slackApi->postMessage(
                 $channel,
-                "Nice try, <@{$fromUser}> — you can't give yourself karma 😏"
+                "Nice try, <@{$fromUser}> — you can't give yourself karma 😏",
+                $messageTimestamp
             );
 
             return;
@@ -107,7 +108,8 @@ final class Router
         $this->slackApi->addReaction($channel, $messageTimestamp, self::REACTION_EMOJI);
         $this->slackApi->postMessage(
             $channel,
-            "<@{$toUser}> now has {$result['karma']} karma{$tierText}!{$cappedText}"
+            "<@{$toUser}> now has {$result['karma']} karma{$tierText}!{$cappedText}",
+            $messageTimestamp
         );
     }
 

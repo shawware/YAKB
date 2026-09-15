@@ -19,7 +19,7 @@ interface SlackApiInterface
         string $signatureHeader
     ): bool;
 
-    public function postMessage(string $channel, string $text): void;
+    public function postMessage(string $channel, string $text, ?string $threadTs = null): void;
 
     public function addReaction(string $channel, string $timestamp, string $emoji): void;
 }

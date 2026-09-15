@@ -55,7 +55,7 @@ final class AppRoutingTest extends TestCase
 
         $this->slackApi->expects($this->once())
             ->method('postMessage')
-            ->with('C1', $this->stringContains('<@UTOUSER> now has 2 karma'));
+            ->with('C1', $this->stringContains('<@UTOUSER> now has 2 karma'), '1699999999.0001');
 
         $result = $this->router->handleEvent([
             'type' => 'event_callback',
@@ -80,7 +80,7 @@ final class AppRoutingTest extends TestCase
 
         $this->slackApi->expects($this->once())
             ->method('postMessage')
-            ->with('C1', $this->stringContains("can't give yourself karma"));
+            ->with('C1', $this->stringContains("can't give yourself karma"), '1700000000.0001');
 
         $this->router->handleEvent([
             'type' => 'event_callback',
@@ -107,7 +107,7 @@ final class AppRoutingTest extends TestCase
             });
 
         $this->slackApi->method('postMessage')
-            ->willReturnCallback(function (string $channel, string $text) use (&$messages): void {
+            ->willReturnCallback(function (string $channel, string $text, ?string $threadTs = null) use (&$messages): void {
                 $messages[] = $text;
             });
 
@@ -144,7 +144,7 @@ final class AppRoutingTest extends TestCase
     {
         $this->slackApi->expects($this->once())
             ->method('postMessage')
-            ->with('C1', $this->stringContains('(capped at 5 karma per message)'));
+            ->with('C1', $this->stringContains('(capped at 5 karma per message)'), '1700000000.0003');
 
         $this->router->handleEvent([
             'type' => 'event_callback',

@@ -46,12 +46,18 @@ final class SlackApi implements SlackApiInterface
         return hash_equals($expected, $signatureHeader);
     }
 
-    public function postMessage(string $channel, string $text): void
+    public function postMessage(string $channel, string $text, ?string $threadTs = null): void
     {
-        $this->call('chat.postMessage', [
+        $json = [
             'channel' => $channel,
             'text' => $text,
-        ]);
+        ];
+
+        if ($threadTs !== null) {
+            $json['thread_ts'] = $threadTs;
+        }
+
+        $this->call('chat.postMessage', $json);
     }
 
     public function addReaction(string $channel, string $timestamp, string $emoji): void

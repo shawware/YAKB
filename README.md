@@ -6,7 +6,7 @@ One PHP codebase supports several clients. Each client runs on its own host, wit
 
 ## Features
 
-- The bot tracks karma from `@user ++` mentions in Slack channels. It adds an emoji reaction and replies in the channel with the new karma and tier.
+- The bot tracks karma from `@user ++` mentions in Slack channels. It adds an emoji reaction and replies, threaded under the original message, with the new karma and tier.
 - A single message can award at most a configured maximum number of karma, regardless of how many `+` signs it contains.
 - A user cannot give karma to themselves. The bot reacts and replies to say so, instead.
 - Slash commands: `/karma`, `/karma @user`, `/karma top`, `/karma history [@user]`, `/karma month [@user]`. Replies are private, visible only to the person who ran the command.
